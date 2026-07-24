@@ -10,11 +10,13 @@
      SDK 설정 및 구성 → "구성" 선택 → 나오는 코드 복사
    ═══════════════════════════════════════════════════ */
 
-window.STAYSCAN_FIREBASE = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyClX8eRlHKKTsakkGbUKYDbd86CjEBs-wA",
+  authDomain: "stay-you-booking.firebaseapp.com",
+  projectId: "stay-you-booking",
+  storageBucket: "stay-you-booking.firebasestorage.app",
+  messagingSenderId: "732264305888",
+  appId: "1:732264305888:web:ed8bad4000da156bcf2c85",
+  measurementId: "G-4QEPZWY2C5"
 };
