@@ -11,7 +11,7 @@
    ═══════════════════════════════════════════════════ */
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+window.STAYSCAN_FIREBASE = {
   apiKey: "AIzaSyClX8eRlHKKTsakkGbUKYDbd86CjEBs-wA",
   authDomain: "stay-you-booking.firebaseapp.com",
   projectId: "stay-you-booking",
