@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StayScan · 펜션 진단 DB</title>
+
+<!-- ── 앱 설치용 ── -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B4332">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StayScan">
+<meta name="description" content="펜션 온라인 노출을 조사하고 진단서를 만드는 내부 도구">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png" type="image/png">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ink:#0F231B; --green:#1B4332; --green2:#2D6A4F; --green3:#52796F;
+  --mint:#D8F3DC; --mint2:#EDF7EF; --paper:#F5F7F5; --card:#FFFFFF;
+  --line:#DFE6E1; --line2:#EDF1EE;
+  --muted:#6B7B72; --amber:#B4740A; --red:#B3261E; --blue:#1B5E8C;
+  --r:14px; --rs:9px;
+  --fs:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic','맑은 고딕',sans-serif;
+  background:var(--paper); color:var(--ink); font-size:var(--fs); line-height:1.55;
+  -webkit-font-smoothing:antialiased; padding-bottom:96px;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--green2)}
+
+/* ── 헤더 ── */
+header{
+  position:sticky;top:0;z-index:50;background:var(--green);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 0;
+}
+.hrow{display:flex;align-items:baseline;gap:9px;padding-bottom:11px}
+.logo{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.logo span{color:var(--mint);font-weight:600}
+.tag{font-size:11.5px;color:#9CC5AC;margin-left:auto;text-align:right;line-height:1.3}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  padding:9px 14px 10px;font-size:14px;font-weight:600;color:#9CC5AC;
+  border-bottom:2.5px solid transparent;white-space:nowrap;flex-shrink:0;
+}
+nav button.on{color:#fff;border-color:var(--mint)}
+
+main{padding:16px 14px 0;max-width:820px;margin:0 auto}
+
+/* ── 공통 ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-bottom:12px}
+.card.flat{padding:0;overflow:hidden}
+h2.sec{font-size:15px;font-weight:800;margin:22px 0 9px;color:var(--green);letter-spacing:-.2px;display:flex;align-items:center;gap:7px}
+h2.sec:first-child{margin-top:0}
+h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.row{display:flex;gap:8px;align-items:center}
+.right{margin-left:auto}
+.grow{flex:1;min-width:0}
+.hide{display:none !important}
+
+label.f{display:block;margin-bottom:11px}
+label.f > .lb{display:block;font-size:12.5px;font-weight:700;color:var(--green2);margin-bottom:4px}
+input[type=text],input[type=number],input[type=date],input[type=tel],select,textarea{
+  width:100%;padding:10px 11px;border:1.5px solid var(--line);border-radius:var(--rs);
+  background:#fff;outline:none;font-size:15px;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(45,106,79,.11)}
+textarea{min-height:78px;resize:vertical;line-height:1.5}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+.btn{
+  padding:10px 15px;border-radius:var(--rs);font-weight:700;font-size:14.5px;
+  background:var(--green);color:#fff;display:inline-flex;align-items:center;gap:6px;justify-content:center;
+}
+.btn:active{transform:translateY(1px)}
+.btn.sec{background:#fff;color:var(--green);border:1.5px solid var(--line)}
+.btn.ghost{background:var(--mint2);color:var(--green)}
+.btn.danger{background:#fff;color:var(--red);border:1.5px solid #E8CFCD}
+.btn.sm{padding:7px 11px;font-size:13px}
+.btn.full{width:100%}
+.btn:disabled{opacity:.45}
+
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--mint);color:var(--green)}
+.pill.gray{background:#EFF2F0;color:var(--muted)}
+.pill.amber{background:#FBF0DC;color:var(--amber)}
+.pill.red{background:#FBE9E7;color:var(--red)}
+.pill.blue{background:#E3EFF7;color:var(--blue)}
+
+/* ── 펜션 목록 ── */
+.plist{display:flex;flex-direction:column;gap:9px}
+.pitem{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;cursor:pointer;transition:border-color .12s}
+.pitem:active{border-color:var(--green2)}
+.pitem .nm{font-weight:800;font-size:16px;letter-spacing:-.2px}
+.pitem .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+.grouphd{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--green2);letter-spacing:-.2px;margin:3px 0 -1px}
+.grouphd::after{content:"";flex:1;height:1px;background:var(--line)}
+.grouphd.gray{color:var(--muted)}
+.grouphd:first-child{margin-top:0}
+.scorechip{font-size:22px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.scorechip small{font-size:11px;font-weight:600;color:var(--muted);display:block;text-align:center;margin-top:2px}
+
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty .big{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px}
+
+/* ── 시그니처: 스코어 바 ── */
+.scoreset{display:flex;flex-direction:column;gap:9px}
+.sbar{display:grid;grid-template-columns:78px 1fr 34px;align-items:center;gap:9px}
+.sbar .nm{font-size:12.5px;font-weight:700;color:var(--green2)}
+.sbar .track{position:relative;height:19px;background:var(--line2);border-radius:5px;overflow:hidden}
+.sbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.sbar .mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
+.sbar .mark::after{content:"";position:absolute;top:-3px;left:-2.5px;border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-top:4px solid var(--ink);opacity:.7}
+.sbar .vl{font-size:13.5px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.legend{font-size:11.5px;color:var(--muted);margin-top:9px;display:flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:2px;height:11px;background:var(--ink);opacity:.55}
+
+/* ── 조사 폼 ── */
+.acc{border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:9px;overflow:hidden}
+.acc > .hd{display:flex;align-items:center;gap:9px;padding:13px 14px;font-weight:800;font-size:14.5px;color:var(--green);cursor:pointer}
+.acc > .hd .cnt{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted)}
+.acc > .hd .ar{transition:transform .18s;color:var(--green3);font-size:12px}
+.acc.open > .hd .ar{transform:rotate(90deg)}
+.acc > .bd{padding:2px 14px 14px;border-top:1px solid var(--line2);display:none}
+.acc.open > .bd{display:block}
+
+.krow{display:grid;grid-template-columns:1fr 84px 66px;gap:7px;align-items:center;margin-bottom:7px}
+.krow .kw{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.krow input{padding:8px 9px;text-align:center;font-variant-numeric:tabular-nums}
+.opn{padding:8px 6px;border:1.5px solid var(--line);border-radius:var(--rs);background:var(--mint2);color:var(--green);font-size:12px;font-weight:700;text-align:center;text-decoration:none;display:block}
+
+.chk{display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--line2);font-size:14.5px}
+.chk:last-child{border:none}
+.chk input{width:20px;height:20px;accent-color:var(--green2);flex-shrink:0}
+
+.otacard{border:1px solid var(--line2);border-radius:var(--rs);padding:11px;margin-bottom:8px;background:var(--paper)}
+.otacard .t{font-weight:800;font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+
+/* 금액 입력칸 아래 읽어주는 줄 */
+.mhint{display:block;min-height:17px;margin-top:3px;font-size:12.5px;font-weight:700;color:var(--green2);font-variant-numeric:tabular-nums}
+
+/* ── 수정 이력 ── */
+.chg{border-bottom:1px solid var(--line2)}
+.chg:last-child{border-bottom:none}
+.chg > .hd{display:flex;align-items:center;gap:8px;padding:12px 13px;cursor:pointer;font-size:14px;font-weight:700;color:var(--green)}
+.chg > .hd .ar{transition:transform .18s;color:var(--green3);font-size:11px;flex-shrink:0}
+.chg.open > .hd .ar{transform:rotate(90deg)}
+.chg > .hd .cnt{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--muted);flex-shrink:0}
+.chg > .bd{display:none;padding:0 13px 13px 31px}
+.chg.open > .bd{display:block}
+.chg .bd ul{margin:0;padding-left:15px}
+.chg .bd li{font-size:13px;line-height:1.7;margin-bottom:6px}
+.chg .bd li:last-child{margin-bottom:0}
+
+/* ── 벤치마크 ── */
+table.bm{width:100%;border-collapse:collapse;font-size:13.5px}
+table.bm th,table.bm td{padding:9px 8px;border-bottom:1px solid var(--line2);text-align:right;font-variant-numeric:tabular-nums}
+table.bm th{background:var(--green);color:#fff;font-size:12px;font-weight:700;border:none}
+table.bm th:first-child,table.bm td:first-child{text-align:left}
+table.bm tr.me td{background:var(--mint2);font-weight:700}
+table.bm td.pos{color:var(--green2);font-weight:700}
+table.bm td.neg{color:var(--red);font-weight:700}
+
+/* ── 진단서 ── */
+#report{background:#fff}
+.rep{padding:0}
+.rep .rhead{background:var(--green);color:#fff;padding:16px;border-radius:var(--r) var(--r) 0 0}
+.rep .rhead .t1{font-size:12px;color:var(--mint);font-weight:700;letter-spacing:.5px}
+.rep .rhead .t2{font-size:23px;font-weight:800;margin-top:3px;letter-spacing:-.4px}
+.rep .rhead .t3{font-size:12.5px;color:#B7D8C3;margin-top:5px}
+.rep .rbody{padding:16px;border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r)}
+.rep h3{font-size:14.5px;font-weight:800;color:var(--green);margin:20px 0 9px;padding-bottom:5px;border-bottom:2px solid var(--green)}
+.rep h3:first-child{margin-top:0}
+.urgent{counter-reset:u}
+.urgent li{margin-bottom:9px;font-size:14px;line-height:1.5}
+.urgent li b{color:var(--red)}
+.repfoot{background:var(--green);color:#fff;padding:14px;border-radius:var(--r);text-align:center;margin-top:16px;font-size:13px}
+/* 담당자 소견 — 진단서에 인쇄되는 손글씨 자리 (v1.1.7) */
+.rep .opinion{background:var(--mint2);border-left:4px solid var(--green);border-radius:0 var(--rs) var(--rs) 0;
+  padding:13px 14px;font-size:14px;line-height:1.65;color:var(--ink);white-space:normal}
+.rep .opinion .by{margin-top:10px;font-size:12.5px;color:var(--muted);text-align:right}
+.repfoot .co{font-size:16px;font-weight:800;margin-bottom:4px}
+
+/* ── 토스트/모달 ── */
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:.22s;z-index:200;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal{position:fixed;inset:0;background:rgba(15,35,27,.45);z-index:150;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.modal .box{background:#fff;border-radius:18px 18px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);width:100%;max-width:520px;max-height:88vh;overflow:auto}
+.modal h4{margin:0 0 12px;font-size:17px;font-weight:800}
+
+/* ── 하단 저장바 ── */
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 14px calc(env(safe-area-inset-bottom) + 10px);display:flex;gap:8px;max-width:820px;margin:0 auto}
+
+.banner{background:#FBF0DC;border:1px solid #EBD9AE;color:#7A5205;padding:11px 13px;border-radius:var(--rs);font-size:13px;line-height:1.5;margin-bottom:12px}
+.banner b{font-weight:800}
+
+@media(min-width:560px){ .krow{grid-template-columns:1fr 110px 80px} }
+
+/* ── 인쇄 ── */
+@media print{
+  @page{size:A4;margin:14mm 13mm}
+  body{background:#fff;padding:0;font-size:10.5pt}
+  header,nav,.savebar,#toast,.noprint{display:none !important}
+  main{padding:0;max-width:none}
+  #report{display:block !important}
+  .rep .rhead{border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rep .rbody{border:none;padding:12px 0}
+  .rep h3{page-break-after:avoid}
+  table.bm{page-break-inside:auto}
+  table.bm th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sbar .fill,.pill,.repfoot{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pagebreak{page-break-before:always}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div class="logo">Stay<span>Scan</span></div>
+    <div class="tag" id="dbtag">저장소 확인 중</div>
+  </div>
+  <nav id="nav">
+    <button data-t="list" class="on">펜션 목록</button>
+    <button data-t="survey">조사</button>
+    <button data-t="bench">벤치마크</button>
+    <button data-t="report">진단서</button>
+    <button data-t="set">설정</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ══ 목록 ══ -->
+  <section id="t-list">
+    <div id="localwarn" class="banner hide">
+      <b>임시 저장 모드입니다.</b> Firebase 설정 전에는 새로고침하면 자료가 사라집니다.
+      설정 탭에서 Firebase 정보를 넣거나, 작업 후 <b>백업 내려받기</b>를 꼭 눌러주세요.
+    </div>
+
+    <div class="row" style="margin-bottom:11px">
+      <input type="text" id="q" placeholder="펜션명 · 지역 검색" class="grow">
+      <button class="btn" id="addBtn">+ 등록</button>
+    </div>
+
+    <div class="row" style="gap:6px;margin-bottom:13px;overflow-x:auto;padding-bottom:2px">
+      <button class="btn sec sm fchip on" data-f="all">전체</button>
+      <button class="btn sec sm fchip" data-f="todo">미조사</button>
+      <button class="btn sec sm fchip" data-f="done">조사완료</button>
+      <button class="btn sec sm fchip" data-f="managed">관리 중</button>
+      <button class="btn sec sm fchip" data-f="target">영업 대상</button>
+    </div>
+
+    <div id="plist" class="plist"></div>
+  </section>
+
+  <!-- ══ 조사 ══ -->
+  <section id="t-survey" class="hide"></section>
+
+  <!-- ══ 벤치마크 ══ -->
+  <section id="t-bench" class="hide"></section>
+
+  <!-- ══ 진단서 ══ -->
+  <section id="t-report" class="hide"></section>
+
+  <!-- ══ 설정 ══ -->
+  <section id="t-set" class="hide"></section>
+</main>
+
+<div id="toast"></div>
+<div id="modalHost"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   StayScan · 펜션 진단 DB
+   ㈜스테이유 토탈 솔루션 내부용
+
+   ▸ Firebase 설정은 같은 폴더의 config.js 에 있습니다.
+     비워두면 임시 저장 모드로 동작합니다(새로고침 시 소멸).
+   ▸ 외부 사이트를 자동으로 긁어오지 않습니다.
+     검색 링크를 열어주고, 눈으로 본 값을 입력하는 방식입니다.
+   ═══════════════════════════════════════════════════ */
+
+const APP_VERSION = '1.1.7';
+
+/* ── 수정 이력 ──
+   설정 탭 맨 아래에 버전별로 펼쳐 볼 수 있게 나옵니다.
+   새 버전을 낼 때는 APP_VERSION 을 올리고, 아래 목록 맨 위에 한 덩어리만 추가하면 됩니다.
+   맨 위가 항상 최신 버전이어야 합니다. d 는 날짜, items 는 바뀐 내용 줄 목록입니다. */
+const CHANGELOG = [
+  { v:'1.1.7', d:'2026-07-26', items:[
+    '<b>진단서에 담당자 소견을 넣을 수 있게 했습니다.</b> 조사하면서 느낀 점을 적어두면 진단서 「담당자 소견」 자리에 그대로 인쇄됩니다. 조사 탭에도 있고, 진단서 화면 맨 위에서 바로 쓸 수도 있습니다.',
+    '진단서 화면의 소견칸 옆에 <b>「조사 메모 가져오기」</b> 버튼을 뒀습니다. 영업 기록에 적어둔 메모를 불러와서 고쳐 쓸 수 있습니다.',
+    '<b>영업 메모 자체는 진단서에 인쇄되지 않습니다.</b> 우리끼리 적어둔 말이 사장님께 그대로 나가면 안 되므로, 인쇄되는 것은 소견칸에 적은 내용뿐입니다.',
+    '소견을 적지 않으면 그 자리는 통째로 빠지고 항목 번호도 자동으로 당겨집니다.'
+  ]},
+  { v:'1.1.6', d:'2026-07-26', items:[
+    '<b>최근 활동을 세지 않는 방식으로 바꿨습니다.</b> 네이버 플레이스는 사진 등록일을 화면에 보여주지 않고, 업체사진 장수도 어디에도 표시되지 않습니다. 그래서 “최근 3개월에 몇 장” 을 세는 것은 애초에 불가능한 조사였습니다. 눈으로 바로 판단할 수 있는 네 가지로 바꿨습니다 — 업체사진 분량(4단계) · 맨 위 사진의 계절감(3단계) · 소식 최근 게시일(날짜는 실제로 보입니다) · 영상 유무(3단계).',
+    '<b>조사 회차가 쌓입니다.</b> 저장할 때마다 그날의 판단이 기록되어, 두 번째 조사부터는 “지난 조사보다 사진이 늘었습니다” 같은 변화가 자동으로 나옵니다. 관리 중 펜션은 이 기록이 재계약 자리에서 쓸 성과 증빙이 됩니다.',
+    '네이버 노출 항목에서 <b>플레이스 사진 수</b> 입력칸을 뺐습니다. 같은 이유로 셀 수 없는 값이었습니다. 사진이 부족하다는 판단은 이제 업체사진 분량 항목이 대신합니다.',
+    '사진 · 콘텐츠 점검에서 <b>“영상 콘텐츠가 있음”</b> 과 <b>“네이버 소식을 꾸준히 올리고 있음”</b> 두 줄을 뺐습니다. 최근 활동에서 더 정확하게 묻고 있어 같은 질문을 두 번 하던 것입니다.',
+    '“대표 사진이 계절감 있고 선명함” 은 계절 판단이 최근 활동으로 넘어갔으므로 <b>“대표 사진(썸네일)이 선명하고 눈에 띔”</b> 으로 고쳤습니다.',
+    '진단서 4번, 벤치마크 지표표, CSV 내려받기도 새 항목에 맞춰 바꿨습니다. 예전에 적어둔 사진 수 · 영상 수 자료는 지우지 않고 서버에 그대로 남겨두었습니다.'
+  ]},
+  { v:'1.1.5', d:'2026-07-26', items:[
+    '조사 탭에서 OTA 채널 항목을 걷어냈습니다. 저희는 네이버 광고만 하므로 조사·진단서·벤치마크 화면 어디에도 나오지 않습니다. 이미 입력해둔 OTA 자료는 지우지 않고 서버에 그대로 남겨두었으니, 나중에 필요하면 되살릴 수 있습니다.',
+    '<b>최근 활동</b> 영역을 새로 넣었습니다. 최근 3개월 동안 새로 올린 사진 수 · 영상 수 · 마지막 등록일을 적으면 점수가 매겨집니다. 영상 1개는 사진 4장으로 쳐서 계산하고, 3개월에 사진 25장이면 만점입니다.',
+    '점수 배분을 다시 나눴습니다. 네이버 노출 34 · 리뷰 관리 20 · 사진 콘텐츠 16 · 최근 활동 14 · 예약 공실 16 입니다. 빠진 OTA 몫을 나머지가 나눠 가졌으므로, 기존 펜션의 종합 점수가 조금 달라질 수 있습니다.',
+    '가격 항목의 금액 단위를 <b>만원에서 원으로</b> 바꿨습니다. 앱을 처음 열 때 기존에 적어둔 값(25 → 250,000)을 자동으로 한 번만 고쳐 넣습니다. 입력칸 아래에 금액을 읽어주는 줄이 생겨 자릿수 확인이 쉽습니다.',
+    '사진 · 콘텐츠 점검에서 “네이버 소식 · 쿠폰을 활용함” 한 줄을 <b>소식(공지)</b>과 <b>쿠폰 발행</b> 두 줄로 나눴습니다. 기존에 체크해두신 것은 쿠폰 쪽으로 남았습니다.',
+    '리뷰 점수에서 OTA 리뷰 수를 빼고 네이버 리뷰만 세도록 했습니다.'
+  ]},
+  { v:'1.1.4', d:'2026-07-25', items:[
+    '설정 탭 맨 아래에 버전별 수정 이력을 추가했습니다. 버전을 누르면 그때 무엇을 고쳤는지 펼쳐집니다.'
+  ]},
+  { v:'1.1.3', d:'2026-07-25', items:[
+    '조사 탭 · 영업 기록의 “우리가 광고를 관리 중인 펜션” 체크가 저장한 뒤 풀린 것처럼 보이던 문제를 고쳤습니다. 저장된 값을 화면에 다시 불러오지 않던 것이 원인이었고, 이 때문에 다음번에 저장하면 관리 중 표시가 조용히 지워졌습니다.',
+    '펜션 이름 옆과 “영업 기록” 제목 옆에 관리 중 배지를 넣어, 아코디언을 열지 않아도 상태가 보이게 했습니다.',
+    '조사 내용을 저장하면 펜션 목록이 바로 갱신되도록 했습니다.'
+  ]},
+  { v:'1.1.2', d:'2026-07-25', items:[
+    '벤치마크 탭 점수 막대에 소수점이 길게 나오던 것을 정수로 반올림했습니다.',
+    '펜션 목록을 종합점수 높은 순으로 정렬하고, 계약하지 않은 펜션은 아래로 내렸습니다.',
+    '펜션 목록에 “관리 중 / 영업 대상” 구분선을 넣었습니다.'
+  ]},
+  { v:'1.1.1', d:null, items:[
+    '앱을 처음 만들었습니다. 펜션 목록 · 조사 · 벤치마크 · 진단서 · 설정 5개 탭, Firebase 저장, 백업 내려받기까지 포함한 첫 버전입니다.'
+  ]}
+];
+
+/* ── Firebase 설정 ──
+   설정값은 같은 폴더의 config.js 에 들어 있습니다.
+   앱을 업데이트할 때 이 파일(stayscan.html)만 바꾸면 되고,
+   config.js 는 그대로 두면 되므로 설정이 지워지지 않습니다.
+
+   config.js 가 없거나 비어 있으면 임시 저장 모드로 동작합니다. */
+const FIREBASE_CONFIG = (typeof window !== 'undefined' && window.STAYSCAN_FIREBASE) || {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+/* ── 회사 정보 (진단서에 인쇄됨) ── */
+const COMPANY = {
+  name: '주식회사 스테이유 토탈 솔루션',
+  ceo: '정인수',
+  addr: '전남 여수시 돌산읍 물돌뱅길 21-39',
+  phone: '010-8273-9966',
+  extra: '부동산박사공인중개사사무소 병행'
+};
+
+/* ── 기본 설정 ── */
+const DEFAULT_SETTINGS = {
+  keywords: ['여수 펜션', '여수 풀빌라', '돌산 펜션', '여수 애견펜션', '여수 가족펜션'],
+  regions: ['돌산', '여수시내', '소라', '화양', '율촌', '기타']
+};
+
+/* 키워드를 빠르게 만들기 위한 조합 재료
+   지역 + 컨셉을 조합해 후보를 뽑아줍니다. 필요하면 자유롭게 고치세요. */
+const KW_PLACES = ['여수', '돌산', '여수 돌산', '전남'];
+const KW_CONCEPTS = [
+  '펜션', '풀빌라', '풀빌라 펜션', '독채펜션', '애견펜션', '애견동반 펜션',
+  '가족펜션', '커플펜션', '오션뷰 펜션', '바다뷰 펜션', '스파펜션',
+  '수영장 펜션', '바베큐 펜션', '단체펜션', '감성펜션', '한옥펜션', '글램핑'
+];
+
+/* ── OTA (v1.1.5부터 화면에서 사용하지 않음) ──
+   저희는 네이버 광고만 하므로 조사·진단서·벤치마크에서 OTA를 모두 뺐습니다.
+   이미 서버에 저장된 OTA 자료는 지우지 않았습니다. 나중에 다시 쓰고 싶으면
+   AREAS 에 { k:'ota', n:'OTA 채널', w:18 } 을 되돌리고 조사 탭 아코디언만 살리면 됩니다. */
+const OTA = [
+  { k:'yeogi',  n:'여기어때',    url:'https://www.goodchoice.kr/' },
+  { k:'yanolja',n:'야놀자',      url:'https://www.yanolja.com/' },
+  { k:'nbook',  n:'네이버 예약', url:'https://map.naver.com/' },
+  { k:'ddnayo', n:'떠나요',      url:'https://www.ddnayo.com/' },
+  { k:'airbnb', n:'에어비앤비',  url:'https://www.airbnb.co.kr/' }
+];
+
+/* v1.1.6 — '영상 콘텐츠가 있음' 과 '네이버 소식을 꾸준히 올림' 은 최근 활동에서
+   더 자세히 묻고 있어 여기서 뺐습니다. 대표 사진 항목은 계절 판단을 최근 활동으로
+   넘기고 "선명하고 눈에 띔" 만 보도록 문구를 고쳤습니다. */
+const CONTENT_ITEMS = [
+  ['heroGood','대표 사진(썸네일)이 선명하고 눈에 띔'],
+  ['roomPhoto','객실별 사진이 모두 있음'],
+  ['nightPhoto','야간 · 수영장 사진이 있음'],
+  ['detailFull','상세페이지 정보가 충실함'],
+  ['replyAll','리뷰 답글을 꾸준히 달고 있음'],
+  ['sns','인스타그램 등 SNS를 운영함'],
+  ['coupon','네이버 쿠폰을 발행하고 있음']
+];
+
+/* 영역별 가중치 (합계 100)
+   v1.1.5 — OTA(18)를 빼고 그 몫을 네이버·리뷰·최근 활동이 나눠 가졌습니다. */
+const AREAS = [
+  { k:'naver',   n:'네이버 노출', w:34 },
+  { k:'recent',  n:'최근 활동',   w:14 },
+  { k:'review',  n:'리뷰 관리',   w:20 },
+  { k:'content', n:'사진·콘텐츠', w:16 },
+  { k:'occ',     n:'예약·공실',   w:16 }
+];
+
+/* ── 최근 활동 (v1.1.6에서 전면 교체) ──────────────────────────────
+   네이버 플레이스는 ① 사진 등록일을 공개하지 않고 ② 사진 장수도 어디에도
+   표시하지 않습니다. 그래서 "3개월에 몇 장" 을 세는 방식은 쓸 수 없습니다.
+   화면을 열면 눈으로 바로 판단되는 것만 묻습니다.
+
+   각 목록은 [저장값, 짧은 이름, 점수, 판단 기준] 순서입니다.
+   기준을 바꾸고 싶으면 숫자만 고치면 되고 다른 곳은 손대지 않아도 됩니다. */
+const RECENT_VOL = [
+  ['rich',   '풍부함',    100, '스크롤이 한참 내려감'],
+  ['enough', '충분함',     75, '객실 · 시설 · 야간까지'],
+  ['basic',  '기본만',     45, '객실 위주로 한 바퀴'],
+  ['none',   '거의 없음',  15, '몇 장뿐']
+];
+const RECENT_SEASON = [
+  ['now',   '지금 계절',   100, '맨 위 사진이 지금과 맞음'],
+  ['vague', '알 수 없음',   55, '실내 위주라 판단 어려움'],
+  ['old',   '철 지남',      15, '다른 계절 사진이 맨 위']
+];
+const RECENT_VIDEO = [
+  ['recent', '있음',       100, '최근에 올린 것으로 보임'],
+  ['old',    '있지만 오래됨', 55, '예전에 올린 것'],
+  ['none',   '없음',        10, '영상 · 클립이 하나도 없음']
+];
+/* 최근 활동 안에서의 배분 (합계 100). 답한 항목끼리만 나눠서 계산합니다. */
+const RECENT_W = { vol:30, season:25, news:30, video:15 };
+/* 분량 단계를 늘었는지 줄었는지 비교할 때 쓰는 순서 */
+const VOL_ORDER = ['none','basic','enough','rich'];
+/* 조사 회차 기록을 몇 개까지 남길지 */
+const RECENT_LOG_MAX = 12;
+
+/* ═══════════ 상태 ═══════════ */
+let db = null, useFB = false;
+let state = { pensions: [], settings: {...DEFAULT_SETTINGS}, cur: null, tab: 'list', filter: 'all', q: '' };
+
+/* ═══════════ 유틸 ═══════════ */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const uid = () => 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+const fmt = n => n==null ? '–' : (Math.round(n*10)/10).toLocaleString('ko-KR');
+/* 금액은 원 단위이므로 소수점 없이 세 자리마다 끊어 보여줍니다 */
+const wonN = n => n==null ? '–' : Math.round(n).toLocaleString('ko-KR');
+const won  = n => n==null ? '–' : Math.round(n).toLocaleString('ko-KR') + '원';
+const today = () => new Date().toISOString().slice(0,10);
+
+/* 이 펜션에 설정된 키워드. 없으면 기본 키워드를 씁니다. */
+function kwOf(p){
+  return (p && Array.isArray(p.keywords) && p.keywords.length) ? p.keywords : state.settings.keywords;
+}
+/* 등록된 모든 펜션이 쓰고 있는 키워드 전체 (중복 없이) */
+function allKeywords(){
+  const set = new Set(state.settings.keywords);
+  state.pensions.forEach(p => {
+    (p.keywords || []).forEach(k => set.add(k));
+    Object.keys(p.naver?.ranks || {}).forEach(k => set.add(k));
+  });
+  return Array.from(set);
+}
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 2100);
+}
+
+function confirmBox(title, body, okLabel, onOk){
+  const host = $('#modalHost');
+  host.innerHTML = `<div class="modal"><div class="box">
+    <h4>${esc(title)}</h4>
+    <p class="sub" style="margin:0 0 16px">${body}</p>
+    <div class="row"><button class="btn sec grow" id="mNo">취소</button>
+    <button class="btn danger grow" id="mYes">${esc(okLabel)}</button></div>
+  </div></div>`;
+  $('#mNo').onclick = () => host.innerHTML = '';
+  $('#mYes').onclick = () => { host.innerHTML=''; onOk(); };
+}
+
+/* ═══════════ 데이터 계층 ═══════════ */
+async function initDB(){
+  if(FIREBASE_CONFIG.projectId){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      useFB = true;
+      $('#dbtag').innerHTML = 'Firebase 연결됨<br>v' + APP_VERSION;
+    }catch(e){
+      console.error(e); useFB = false;
+      $('#dbtag').innerHTML = '연결 실패 · 임시 저장<br>v' + APP_VERSION;
+    }
+  }else{
+    $('#dbtag').innerHTML = '임시 저장 모드<br>v' + APP_VERSION;
+  }
+  if(!useFB) $('#localwarn').classList.remove('hide');
+  await loadAll();
+  await migratePriceUnit();
+}
+
+async function loadAll(){
+  if(!useFB) return;
+  try{
+    const snap = await db.collection('scanPensions').orderBy('name').get();
+    state.pensions = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const s = await db.collection('scanConfig').doc('settings').get();
+    if(s.exists) state.settings = { ...DEFAULT_SETTINGS, ...s.data() };
+  }catch(e){ console.error(e); toast('불러오기에 실패했습니다'); }
+}
+
+/* ── 1회 자동 변환: 객단가 만원 → 원 (v1.1.5) ──
+   예전에 "25"(=25만원)라고 적어둔 값을 250000 으로 고쳐 넣습니다.
+   펜션마다 priceUnitWon 표시를 남기므로 두 번 곱해지는 일은 없습니다.
+   1000 이상이면 이미 원 단위로 본 것이라 그대로 둡니다. */
+async function migratePriceUnit(){
+  const jobs = [];
+  state.pensions.forEach(p => {
+    if(p.priceUnitWon) return;
+    p.price ||= {};
+    ['weekend','weekday'].forEach(k => {
+      const v = p.price[k];
+      if(v != null && v > 0 && v < 1000) p.price[k] = Math.round(v * 10000);
+    });
+    p.priceUnitWon = true;
+    jobs.push(savePension(p));
+  });
+  if(jobs.length){
+    try{ await Promise.all(jobs); }catch(e){ console.error(e); }
+  }
+}
+
+async function savePension(p){
+  p.updatedAt = new Date().toISOString();
+  const i = state.pensions.findIndex(x => x.id === p.id);
+  if(i >= 0) state.pensions[i] = p; else state.pensions.push(p);
+  if(useFB){
+    const { id, ...body } = p;
+    try{ await db.collection('scanPensions').doc(id).set(body, {merge:true}); }
+    catch(e){ console.error(e); toast('저장에 실패했습니다'); return false; }
+  }
+  return true;
+}
+
+async function deletePension(id){
+  state.pensions = state.pensions.filter(p => p.id !== id);
+  if(useFB){ try{ await db.collection('scanPensions').doc(id).delete(); }catch(e){ console.error(e); } }
+}
+
+async function saveSettings(){
+  if(useFB){ try{ await db.collection('scanConfig').doc('settings').set(state.settings); }catch(e){ console.error(e); } }
+}
+
+/* ═══════════ 점수 계산 ═══════════ */
+function rankScore(r){
+  if(r == null || r <= 0) return null;
+  if(r <= 3)   return 100;
+  if(r <= 5)   return 92;
+  if(r <= 10)  return 80;
+  if(r <= 20)  return 64;
+  if(r <= 30)  return 50;
+  if(r <= 50)  return 36;
+  if(r <= 100) return 20;
+  return 10;
+}
+const clamp = n => Math.max(0, Math.min(100, Math.round(n)));
+
+function scoreNaver(p){
+  const nv = p.naver || {};
+  const rs = Object.values(nv.ranks || {}).map(rankScore).filter(v => v != null);
+  if(!rs.length && !nv.place) return null;
+  let s = rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : 30;
+  if(nv.place === false) return 5;
+  /* v1.1.6 — 사진 장수는 화면에 안 나오므로, 최근 활동에서 고른 분량 판단을 씁니다 */
+  if(p.recent?.vol === 'none') s -= 10;
+  if((nv.blogReviews ?? 99) < 5) s -= 8;
+  if(nv.booking === false) s -= 10;
+  return clamp(s);
+}
+function scoreOta(p){
+  const o = p.ota || {}; let listed = 0, rs = [];
+  OTA.forEach(x => { const d = o[x.k]; if(d && d.listed){ listed++; const v = rankScore(d.rank); if(v!=null) rs.push(v); } });
+  if(!Object.keys(o).length) return null;
+  const cov = (listed / OTA.length) * 100;
+  const pos = rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : 40;
+  return clamp(cov * 0.5 + pos * 0.5);
+}
+function scoreReview(p){
+  const nv = p.naver || {};
+  /* v1.1.5 — OTA 리뷰는 세지 않고 네이버 리뷰만 봅니다 */
+  let total = (nv.visitorReviews || 0) + (nv.blogReviews || 0);
+  if(!total && nv.visitorReviews == null) return null;
+  let s = Math.min(70, Math.sqrt(total) * 7);
+  const rr = p.content?.replyRate;
+  if(rr != null) s += (rr / 100) * 20; else s += 6;
+  if(nv.lastReview){
+    const days = (Date.now() - new Date(nv.lastReview).getTime()) / 864e5;
+    s += days <= 14 ? 10 : days <= 45 ? 5 : days <= 90 ? 0 : -10;
+  }
+  return clamp(s);
+}
+function scoreContent(p){
+  const c = p.content || {};
+  const keys = CONTENT_ITEMS.map(x => x[0]);
+  const answered = keys.filter(k => c[k] !== undefined);
+  if(!answered.length) return null;
+  const yes = keys.filter(k => c[k] === true).length;
+  return clamp((yes / keys.length) * 100);
+}
+function scoreOcc(p){
+  const pr = p.price || {};
+  const vals = [pr.weekdayOcc, pr.offOcc, pr.peakOcc].filter(v => v != null);
+  if(!vals.length) return null;
+  const wd = pr.weekdayOcc, off = pr.offOcc, pk = pr.peakOcc;
+  let s = 0, w = 0;
+  if(wd != null){ s += Math.min(100, wd * 2.0) * 45; w += 45; }
+  if(off != null){ s += Math.min(100, off * 1.8) * 30; w += 30; }
+  if(pk != null){ s += Math.min(100, pk * 1.05) * 25; w += 25; }
+  return clamp(s / w);
+}
+/* ── 최근 활동 (v1.1.6) ── */
+/* 목록에서 값을 찾아 [짧은 이름, 점수] 를 꺼냅니다 */
+const rcFind  = (list, v) => list.find(x => x[0] === v) || null;
+const rcLabel = (list, v) => { const f = rcFind(list, v); return f ? f[1] : null; };
+const rcScore = (list, v) => { const f = rcFind(list, v); return f ? f[2] : null; };
+
+/* 며칠 지났는지. 날짜가 없으면 null */
+function daysSince(d){
+  if(!d) return null;
+  return Math.round((Date.now() - new Date(d).getTime()) / 864e5);
+}
+/* 소식 최근 게시일 → 점수. 소식 자체가 없으면 0점 */
+function newsScore(r){
+  if(r.noNews) return 0;
+  const d = daysSince(r.newsDate);
+  if(d == null) return null;
+  if(d < 0)    return 100;
+  if(d <= 14)  return 100;
+  if(d <= 30)  return 85;
+  if(d <= 60)  return 65;
+  if(d <= 90)  return 40;
+  if(d <= 180) return 20;
+  return 8;
+}
+/* 항목별 점수. 답하지 않은 항목은 null 이고 계산에서 빠집니다. */
+function recentParts(r){
+  r = r || {};
+  return {
+    vol:    rcScore(RECENT_VOL, r.vol),
+    season: rcScore(RECENT_SEASON, r.season),
+    news:   newsScore(r),
+    video:  rcScore(RECENT_VIDEO, r.video)
+  };
+}
+function scoreRecentRaw(r){
+  const parts = recentParts(r);
+  let s = 0, w = 0;
+  Object.entries(RECENT_W).forEach(([k, ww]) => {
+    if(parts[k] != null){ s += parts[k] * ww; w += ww; }
+  });
+  return w ? clamp(s / w) : null;
+}
+function scoreRecent(p){ return scoreRecentRaw(p.recent); }
+
+/* 몇 개 항목에 답했는지 (진단서에서 "4개 중 2개만 확인" 을 표시하기 위함) */
+function recentAnswered(r){
+  const parts = recentParts(r);
+  return Object.keys(RECENT_W).filter(k => parts[k] != null).length;
+}
+
+/* ── 조사 회차 기록 ──
+   저장할 때마다 그날의 판단을 p.recentLog 에 한 줄씩 쌓습니다.
+   같은 날 여러 번 저장하면 그날 줄만 덮어씁니다. */
+function pushRecentLog(p){
+  const r = p.recent || {};
+  const s = scoreRecentRaw(r);
+  if(s == null) return;                       /* 아무것도 안 적었으면 기록하지 않음 */
+  p.recentLog = Array.isArray(p.recentLog) ? p.recentLog : [];
+  const entry = { d: today(), vol: r.vol || null, season: r.season || null,
+                  video: r.video || null, newsDate: r.newsDate || null,
+                  noNews: !!r.noNews, s };
+  const i = p.recentLog.findIndex(x => x.d === entry.d);
+  if(i >= 0) p.recentLog[i] = entry; else p.recentLog.push(entry);
+  p.recentLog.sort((a, b) => a.d < b.d ? -1 : 1);
+  if(p.recentLog.length > RECENT_LOG_MAX) p.recentLog = p.recentLog.slice(-RECENT_LOG_MAX);
+}
+/* 오늘 것을 뺀 가장 최근 기록 = 지난번 조사 */
+function recentPrev(p){
+  const lg = Array.isArray(p.recentLog) ? p.recentLog : [];
+  const t = today();
+  for(let i = lg.length - 1; i >= 0; i--) if(lg[i].d !== t) return lg[i];
+  return null;
+}
+/* 지난 조사와 견줘 무엇이 달라졌는지 문장으로 */
+function recentDelta(p, r){
+  const pv = recentPrev(p);
+  if(!pv) return null;
+  r = r || p.recent || {};
+  const out = [];
+  const a = VOL_ORDER.indexOf(pv.vol), b = VOL_ORDER.indexOf(r.vol);
+  if(a >= 0 && b >= 0 && a !== b)
+    out.push(b > a ? '업체사진이 늘었습니다' : '업체사진이 줄어 보입니다');
+  if(pv.video && r.video && pv.video !== r.video && r.video !== 'none' && pv.video === 'none')
+    out.push('영상이 새로 올라왔습니다');
+  const pd = daysSince(pv.newsDate), nd = daysSince(r.newsDate);
+  if(pv.newsDate && r.newsDate && pv.newsDate !== r.newsDate) out.push('소식을 새로 올렸습니다');
+  else if(pv.newsDate && r.newsDate && pv.newsDate === r.newsDate && nd != null && nd > 60)
+    out.push('소식이 지난 조사 이후로 멈춰 있습니다');
+  if(pv.season !== r.season && r.season === 'old') out.push('사진이 철 지난 상태로 바뀌었습니다');
+  const cur = scoreRecentRaw(r);
+  const gap = (cur != null && pv.s != null) ? cur - pv.s : null;
+  return { prev: pv, lines: out, gap, cur };
+}
+function scores(p){
+  return { naver:scoreNaver(p), recent:scoreRecent(p), review:scoreReview(p), content:scoreContent(p), occ:scoreOcc(p) };
+}
+function totalScore(p){
+  const s = scores(p); let sum = 0, w = 0;
+  AREAS.forEach(a => { if(s[a.k] != null){ sum += s[a.k] * a.w; w += a.w; } });
+  return w ? Math.round(sum / w) : null;
+}
+function grade(v){
+  if(v == null) return { t:'미조사', c:'var(--muted)', p:'gray' };
+  if(v >= 78) return { t:'양호', c:'var(--green2)', p:'' };
+  if(v >= 55) return { t:'보통', c:'var(--amber)', p:'amber' };
+  return { t:'개선 필요', c:'var(--red)', p:'red' };
+}
+function barColor(v){ return v >= 78 ? 'var(--green2)' : v >= 55 ? '#D6A429' : '#D06A5F'; }
+const surveyed = p => totalScore(p) != null;
+
+/* ═══════════ 벤치마크 ═══════════ */
+function benchmark(exceptId){
+  const pool = state.pensions.filter(p => p.id !== exceptId && surveyed(p));
+  if(!pool.length) return null;
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  const b = { n: pool.length, areas:{}, total: avg(pool.map(totalScore).filter(v=>v!=null)) };
+  AREAS.forEach(a => { b.areas[a.k] = avg(pool.map(p => scores(p)[a.k]).filter(v => v != null)); });
+  b.ranks = {};
+  allKeywords().forEach(k => {
+    const vs = pool.map(p => p.naver?.ranks?.[k]).filter(v => v != null);
+    if(vs.length) b.ranks[k] = { avg: avg(vs), n: vs.length, best: Math.min(...vs) };
+  });
+  /* v1.1.6 — 사진·영상 개수 대신 판단값의 평균을 씁니다 */
+  b.volAvg   = avg(pool.map(p => rcScore(RECENT_VOL, p.recent?.vol)).filter(v => v != null));
+  b.newsDays = avg(pool.map(p => p.recent?.noNews ? null : daysSince(p.recent?.newsDate)).filter(v => v != null));
+  (() => {
+    const vs = pool.map(p => p.recent?.video).filter(v => v);
+    b.videoRate = vs.length ? Math.round(vs.filter(v => v !== 'none').length / vs.length * 100) : null;
+    const ss = pool.map(p => p.recent?.season).filter(v => v);
+    b.seasonRate = ss.length ? Math.round(ss.filter(v => v === 'now').length / ss.length * 100) : null;
+  })();
+  b.visitorReviews = avg(pool.map(p => p.naver?.visitorReviews).filter(v => v != null));
+  b.blogReviews    = avg(pool.map(p => p.naver?.blogReviews).filter(v => v != null));
+  b.weekend        = avg(pool.map(p => p.price?.weekend).filter(v => v != null));
+  b.weekday        = avg(pool.map(p => p.price?.weekday).filter(v => v != null));
+  b.weekdayOcc     = avg(pool.map(p => p.price?.weekdayOcc).filter(v => v != null));
+  b.peakOcc        = avg(pool.map(p => p.price?.peakOcc).filter(v => v != null));
+  b.offOcc         = avg(pool.map(p => p.price?.offOcc).filter(v => v != null));
+  return b;
+}
+
+/* ═══════════ 자동 진단 문장 ═══════════ */
+function findings(p){
+  const out = [];
+  const nv = p.naver || {}, c = p.content || {}, pr = p.price || {}, o = p.ota || {};
+  const add = (w, t, why) => out.push({ w, t, why });
+
+  if(nv.place === false) add(100, '네이버 플레이스에 아직 등록되어 있지 않습니다.', '여수를 찾는 손님 대부분이 네이버에서 출발합니다. 등록만으로 노출이 시작됩니다.');
+  Object.entries(nv.ranks || {}).forEach(([k, r]) => {
+    if(r == null) return;
+    if(r > 30) add(88, `"${k}" 검색에서 ${r}위입니다.`, '첫 화면에 들어오지 못하면 사실상 노출되지 않는 것과 같습니다.');
+    else if(r > 10) add(62, `"${k}" 검색에서 ${r}위입니다.`, '한 화면 안으로 끌어올릴 수 있는 구간입니다.');
+  });
+  if(nv.booking === false) add(74, '네이버 예약이 연동되어 있지 않습니다.', '검색에서 바로 예약으로 이어지는 길이 끊겨 있습니다.');
+  if((nv.blogReviews ?? 99) < 10) add(58, `블로그 리뷰가 ${nv.blogReviews ?? 0}건입니다.`, '블로그 언급량은 플레이스 순위에 직접 반영됩니다.');
+  if(nv.lastReview){
+    const d = Math.round((Date.now() - new Date(nv.lastReview).getTime()) / 864e5);
+    if(d > 60) add(66, `최근 리뷰가 ${d}일 전입니다.`, '리뷰가 끊기면 순위가 서서히 내려갑니다.');
+  }
+  /* 최근 활동 (v1.1.6) */
+  const rc = p.recent || {};
+  if(rc.vol === 'none')
+    add(84, '플레이스에 올려둔 업체 사진이 거의 없습니다.', '손님은 사진을 보고 들어올지 말지를 정합니다. 사진이 얇으면 순위가 올라도 예약으로 이어지지 않습니다.');
+  else if(rc.vol === 'basic')
+    add(62, '업체 사진이 객실 한 바퀴 수준에 머물러 있습니다.', '야간 · 수영장 · 조식 · 주변 풍경까지 채워야 검색 결과에서 눈에 띕니다.');
+  if(rc.season === 'old')
+    add(86, '사진 탭 맨 위에 철 지난 계절 사진이 걸려 있습니다.', '지금 예약하려는 손님이 보는 첫 화면입니다. 네이버도 최근 활동이 있는 업체를 위로 올립니다.');
+  else if(rc.season === 'vague')
+    add(44, '최신 사진에서 계절이 읽히지 않습니다.', '지금 이 계절에 온 손님이 무엇을 보게 될지가 드러나야 클릭이 붙습니다.');
+  if(rc.noNews)
+    add(76, '네이버 소식(새소식)을 한 건도 올리지 않고 있습니다.', '소식은 플레이스 안에서 돈 들이지 않고 노출되는 자리인데 통째로 비어 있습니다.');
+  else if(rc.newsDate){
+    const dn = daysSince(rc.newsDate);
+    if(dn > 90)      add(80, `소식을 마지막으로 올린 지 ${dn}일 지났습니다.`, '멈춘 기간이 길수록 순위 회복에 드는 시간도 함께 길어집니다.');
+    else if(dn > 30) add(56, `소식을 마지막으로 올린 지 ${dn}일 지났습니다.`, '2주에 한 번만 올려도 활동 신호가 계속 유지됩니다.');
+  }
+  if(rc.video === 'none')
+    add(56, '플레이스에 영상 · 클립이 없습니다.', '영상이 걸리는 자리가 검색 상단에 따로 있고, 아직 경쟁이 덜한 구간입니다.');
+  else if(rc.video === 'old')
+    add(38, '영상이 있지만 올린 지 오래됐습니다.', '짧은 클립 하나만 새로 올려도 활동 신호가 되살아납니다.');
+  /* 지난 조사와 견준 변화 */
+  (() => {
+    const dl = recentDelta(p, rc);
+    if(!dl || dl.gap == null) return;
+    if(dl.gap <= -12) add(78, `지난 조사(${dl.prev.d}) 이후 최근 활동 점수가 ${Math.abs(dl.gap)}점 떨어졌습니다.`, '관리가 느슨해진 구간입니다. 지금 손대면 회복이 빠릅니다.');
+  })();
+
+  if(c.replyRate != null && c.replyRate < 60) add(56, `리뷰 답글률이 ${c.replyRate}%입니다.`, '답글은 신규 손님이 가장 먼저 보는 신뢰 신호입니다.');
+  if(c.coupon === false) add(38, '네이버 쿠폰을 발행하지 않고 있습니다.', '쿠폰은 검색 결과에 표시가 붙어 클릭률을 올려줍니다.');
+  if(c.heroGood === false) add(72, '대표 사진(썸네일)이 손님을 붙잡지 못하고 있습니다.', '검색 결과에서 클릭을 결정하는 건 목록에 걸리는 사진 한 장입니다.');
+  if(c.nightPhoto === false) add(50, '야간 · 수영장 사진이 없습니다.', '풀빌라는 야간 사진에서 객단가가 결정됩니다.');
+  if(c.detailFull === false) add(48, '상세페이지 정보가 부족합니다.', '문의가 많아지고 예약 전환은 떨어집니다.');
+  if(c.sns === false) add(34, 'SNS 채널 운영이 없습니다.', '재방문과 자연 유입의 통로가 비어 있습니다.');
+  if(pr.weekdayOcc != null && pr.weekdayOcc < 30) add(80, `주중 가동률이 ${pr.weekdayOcc}%입니다.`, '가장 크게 개선할 여지가 남아 있는 지점입니다.');
+  if(pr.offOcc != null && pr.offOcc < 25) add(64, `비수기 가동률이 ${pr.offOcc}%입니다.`, '비수기 상품 구성과 채널 확장이 필요합니다.');
+
+  out.sort((a,b) => b.w - a.w);
+  return out;
+}
+
+/* ═══════════ 렌더: 목록 ═══════════ */
+function renderList(){
+  const q = state.q.trim().toLowerCase();
+  let list = state.pensions.slice();
+  if(state.filter === 'todo')    list = list.filter(p => !surveyed(p));
+  if(state.filter === 'done')    list = list.filter(p => surveyed(p));
+  if(state.filter === 'managed') list = list.filter(p => p.managed);
+  if(state.filter === 'target')  list = list.filter(p => !p.managed);
+  if(q) list = list.filter(p => (p.name+' '+(p.region||'')+' '+(p.owner||'')).toLowerCase().includes(q));
+
+  /* 정렬: ① 계약(관리 중)한 펜션이 위, 계약 없는 곳은 아래
+           ② 각 묶음 안에서는 종합점수 높은 순
+           ③ 아직 조사 안 한 곳은 그 묶음의 맨 끝 (이름순) */
+  const grp = p => p.managed ? 0 : 1;
+  list.sort((a,b) => {
+    if(grp(a) !== grp(b)) return grp(a) - grp(b);
+    const ta = totalScore(a), tb = totalScore(b);
+    if(ta == null && tb == null) return (a.name||'').localeCompare(b.name||'', 'ko');
+    if(ta == null) return 1;
+    if(tb == null) return -1;
+    if(tb !== ta) return tb - ta;
+    return (a.name||'').localeCompare(b.name||'', 'ko');
+  });
+
+  const el = $('#plist');
+  if(!list.length){
+    el.innerHTML = `<div class="empty">
+      <div class="big">${state.pensions.length ? '조건에 맞는 펜션이 없습니다' : '아직 등록된 펜션이 없습니다'}</div>
+      <div class="sub">${state.pensions.length ? '필터나 검색어를 바꿔보세요.' : '오른쪽 위 등록 버튼으로 첫 조사 대상을 추가하세요.'}</div>
+    </div>`;
+    return;
+  }
+  /* 두 묶음이 함께 보일 때만 구분선을 넣는다 */
+  const hasM = list.some(p => p.managed), hasT = list.some(p => !p.managed);
+  const showHead = hasM && hasT;
+  let lastG = null;
+
+  el.innerHTML = list.map(p => {
+    const t = totalScore(p), g = grade(t);
+    let head = '';
+    if(showHead && grp(p) !== lastG){
+      lastG = grp(p);
+      head = lastG === 0
+        ? `<div class="grouphd">관리 중 ${list.filter(x=>x.managed).length}곳</div>`
+        : `<div class="grouphd gray">영업 대상 ${list.filter(x=>!x.managed).length}곳</div>`;
+    }
+    return head + `<div class="pitem" data-id="${p.id}">
+      <div class="row">
+        <div class="grow">
+          <div class="nm">${esc(p.name)}</div>
+          <div class="meta">${esc(p.region||'지역 미입력')} · ${p.rooms ? p.rooms+'실' : '객실 미입력'}${p.owner ? ' · '+esc(p.owner) : ''}</div>
+          <div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
+            <span class="pill ${g.p}">${g.t}</span>
+            ${p.managed ? '<span class="pill blue">관리 중</span>' : ''}
+            ${p.surveyedAt ? `<span class="pill gray">${p.surveyedAt} 조사</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:center;padding-left:8px">
+          <div class="scorechip" style="color:${g.c}">${t ?? '–'}</div>
+          <small>점</small>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.pitem').forEach(n => n.onclick = () => openSurvey(n.dataset.id));
+}
+
+/* ═══════════ 렌더: 조사 ═══════════ */
+function openSurvey(id){
+  state.cur = id;
+  switchTab('survey');
+}
+
+function renderSurvey(){
+  const el = $('#t-survey');
+  const p = state.pensions.find(x => x.id === state.cur);
+  if(!p){
+    el.innerHTML = `<div class="empty"><div class="big">조사할 펜션을 먼저 고르세요</div>
+      <div class="sub">펜션 목록 탭에서 하나를 누르면 조사 화면이 열립니다.</div></div>`;
+    return;
+  }
+  p.naver ||= {}; p.naver.ranks ||= {}; p.ota ||= {}; p.content ||= {}; p.price ||= {}; p.recent ||= {};
+
+  const t = totalScore(p), g = grade(t), b = benchmark(p.id);
+  const sc = scores(p);
+  const nq = encodeURIComponent;
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <div class="grow">
+        <div style="font-size:19px;font-weight:800;letter-spacing:-.3px">${esc(p.name)}${p.managed ? ' <span class="pill blue" style="vertical-align:middle">관리 중</span>' : ''}</div>
+        <div class="sub">${esc(p.region||'지역 미입력')} · ${p.rooms ? p.rooms+'실' : '객실 미입력'}</div>
+      </div>
+      <div style="text-align:center"><div class="scorechip" style="color:${g.c}">${t ?? '–'}</div><small>점</small></div>
+    </div>
+    ${renderScoreBars(sc, b)}
+    <div class="row" style="margin-top:13px;gap:7px">
+      <button class="btn ghost sm grow" id="goReport">진단서 보기</button>
+      <button class="btn sec sm" id="editBasic">기본정보</button>
+      <button class="btn danger sm" id="delP">삭제</button>
+    </div>
+  </div>
+
+  <!-- 네이버 -->
+  <div class="acc open" data-a="naver">
+    <div class="hd"><span class="ar">▶</span>네이버 노출<span class="cnt">${sc.naver ?? '–'}점</span></div>
+    <div class="bd">
+      <div class="row" style="margin:10px 0 10px;align-items:flex-start;gap:9px">
+        <p class="sub grow" style="margin:0">검색 버튼을 눌러 실제 화면을 보고, 이 펜션이 몇 번째에 있는지 숫자만 적으세요. 안 보이면 비워두면 됩니다.</p>
+        <button class="btn sec sm" id="editKw" style="flex-shrink:0">키워드 편집</button>
+      </div>
+      <div class="sub" style="margin-bottom:10px;color:${p.keywords?.length ? 'var(--green2)' : 'var(--amber)'}">
+        ${p.keywords?.length
+          ? `이 펜션 전용 키워드 ${p.keywords.length}개`
+          : `아직 기본 키워드를 쓰고 있습니다 · 펜션 컨셉에 맞게 바꿔주세요`}
+      </div>
+      <div class="krow" style="font-size:11.5px;font-weight:700;color:var(--muted)">
+        <div>검색어</div><div style="text-align:center">순위</div><div style="text-align:center">열기</div>
+      </div>
+      ${kwOf(p).map(k => `
+        <div class="krow">
+          <div class="kw">${esc(k)}</div>
+          <input type="number" min="1" data-rank="${esc(k)}" value="${p.naver.ranks[k] ?? ''}" placeholder="–">
+          <a class="opn" target="_blank" rel="noopener" href="https://map.naver.com/p/search/${nq(k)}">지도</a>
+        </div>`).join('')}
+
+      <div style="margin:14px 0 10px" class="row">
+        <a class="btn sec sm grow" target="_blank" rel="noopener" href="https://search.naver.com/search.naver?query=${nq(p.name)}">"${esc(p.name)}" 통합검색</a>
+        <a class="btn sec sm grow" target="_blank" rel="noopener" href="https://search.naver.com/search.naver?where=blog&query=${nq(p.name)}">블로그 검색</a>
+      </div>
+
+      <div class="chk"><input type="checkbox" data-nv="place" ${p.naver.place ? 'checked':''}><span>네이버 플레이스에 등록되어 있음</span></div>
+      <div class="chk"><input type="checkbox" data-nv="booking" ${p.naver.booking ? 'checked':''}><span>네이버 예약이 연동되어 있음</span></div>
+
+      <div class="g2" style="margin-top:12px">
+        <label class="f"><span class="lb">방문자 리뷰 수</span><input type="number" data-nvn="visitorReviews" value="${p.naver.visitorReviews ?? ''}" placeholder="건"></label>
+        <label class="f"><span class="lb">블로그 리뷰 수</span><input type="number" data-nvn="blogReviews" value="${p.naver.blogReviews ?? ''}" placeholder="건"></label>
+        <label class="f"><span class="lb">최근 리뷰 날짜</span><input type="date" data-nvd="lastReview" value="${p.naver.lastReview ?? ''}"></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 최근 활동 (v1.1.6 — 세지 않고 눈으로 판단) -->
+  <div class="acc" data-a="recent">
+    <div class="hd"><span class="ar">▶</span>최근 활동<span class="cnt">${sc.recent ?? '–'}점</span></div>
+    <div class="bd">
+      <p class="sub" style="margin:10px 0 10px">플레이스를 열고 <b>사진 탭 → 「업체사진」</b>만 골라 보세요. 네이버는 등록 날짜와 장수를 보여주지 않으므로, <b>세지 말고 보이는 대로 고르면</b> 됩니다.</p>
+      <div class="row" style="margin-bottom:12px">
+        <a class="btn sec sm grow" target="_blank" rel="noopener" href="https://map.naver.com/p/search/${nq(p.name)}">플레이스 열기</a>
+      </div>
+
+      <label class="f"><span class="lb">업체사진 분량</span>
+        <select data-rcs="vol">
+          <option value="">– 고르세요 –</option>
+          ${RECENT_VOL.map(([k,n,,h]) => `<option value="${k}" ${p.recent.vol===k?'selected':''}>${n} · ${h}</option>`).join('')}
+        </select>
+      </label>
+
+      <label class="f" style="margin-top:11px"><span class="lb">맨 위(최신) 업체사진의 계절</span>
+        <select data-rcs="season">
+          <option value="">– 고르세요 –</option>
+          ${RECENT_SEASON.map(([k,n,,h]) => `<option value="${k}" ${p.recent.season===k?'selected':''}>${n} · ${h}</option>`).join('')}
+        </select>
+      </label>
+
+      <label class="f" style="margin-top:11px"><span class="lb">영상 · 클립</span>
+        <select data-rcs="video">
+          <option value="">– 고르세요 –</option>
+          ${RECENT_VIDEO.map(([k,n,,h]) => `<option value="${k}" ${p.recent.video===k?'selected':''}>${n} · ${h}</option>`).join('')}
+        </select>
+      </label>
+
+      <label class="f" style="margin-top:11px"><span class="lb">소식(새소식) 최근 게시일</span>
+        <input type="date" data-rcd="newsDate" value="${p.recent.newsDate ?? ''}">
+      </label>
+      <p class="sub" style="margin:5px 0 0">소식은 게시일이 화면에 그대로 보입니다. 맨 위 글의 날짜를 적으세요.</p>
+      <div class="chk" style="margin-top:8px"><input type="checkbox" data-rcb="noNews" ${p.recent.noNews ? 'checked':''}><span>소식이 한 건도 없음</span></div>
+
+      <div id="rcHint" class="banner" style="margin:11px 0 0"></div>
+      ${renderRecentLog(p)}
+    </div>
+  </div>
+
+  <!-- 콘텐츠 -->
+  <div class="acc" data-a="content">
+    <div class="hd"><span class="ar">▶</span>사진 · 콘텐츠 · 리뷰<span class="cnt">${sc.content ?? '–'}점</span></div>
+    <div class="bd">
+      <p class="sub" style="margin:10px 0 10px">보이는 대로 체크하세요. 체크하지 않은 항목은 "없음"으로 계산됩니다.</p>
+      ${CONTENT_ITEMS.map(([k,label]) => `
+        <div class="chk"><input type="checkbox" data-ct="${k}" ${p.content[k] ? 'checked':''}><span>${label}</span></div>`).join('')}
+      <label class="f" style="margin-top:13px"><span class="lb">리뷰 답글률 (%)</span>
+        <input type="number" min="0" max="100" data-ctn="replyRate" value="${p.content.replyRate ?? ''}" placeholder="대략적인 비율">
+      </label>
+    </div>
+  </div>
+
+  <!-- 가격/공실 -->
+  <div class="acc" data-a="price">
+    <div class="hd"><span class="ar">▶</span>가격 · 예약 흐름<span class="cnt">${sc.occ ?? '–'}점</span></div>
+    <div class="bd">
+      <p class="sub" style="margin:10px 0 12px">사장님께 직접 여쭤보거나, 예약 캘린더를 보고 대략적으로 적으면 됩니다. 금액은 <b>원 단위</b>입니다.</p>
+      <div class="g2">
+        <label class="f"><span class="lb">주말 객단가 (원)</span><input type="number" data-prn="weekend" data-money value="${p.price.weekend ?? ''}" placeholder="예: 250000"><span class="mhint"></span></label>
+        <label class="f"><span class="lb">주중 객단가 (원)</span><input type="number" data-prn="weekday" data-money value="${p.price.weekday ?? ''}" placeholder="예: 150000"><span class="mhint"></span></label>
+        <label class="f"><span class="lb">성수기 가동률 (%)</span><input type="number" data-prn="peakOcc" value="${p.price.peakOcc ?? ''}"></label>
+        <label class="f"><span class="lb">비수기 가동률 (%)</span><input type="number" data-prn="offOcc" value="${p.price.offOcc ?? ''}"></label>
+        <label class="f"><span class="lb">주중 가동률 (%)</span><input type="number" data-prn="weekdayOcc" value="${p.price.weekdayOcc ?? ''}"></label>
+        <label class="f"><span class="lb">재방문율 (%)</span><input type="number" data-prn="repeat" value="${p.price.repeat ?? ''}"></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 담당자 소견 (진단서에 인쇄됨) -->
+  <div class="acc" data-a="opinion">
+    <div class="hd"><span class="ar">▶</span>담당자 소견<span class="cnt">${(p.comment||'').trim() ? '작성함' : '없음'}</span></div>
+    <div class="bd">
+      <p class="sub" style="margin:10px 0 11px">여기 적은 내용이 <b>진단서에 그대로 인쇄됩니다.</b> 사장님이 읽는 글이라 생각하고 쓰세요. 아래 영업 기록의 메모는 인쇄되지 않습니다.</p>
+      <label class="f"><span class="lb">조사하며 느낀 점</span>
+        <textarea data-sl="comment" rows="5" placeholder="예) 객실 상태와 뷰는 여수권에서 손에 꼽는데, 그 좋은 조건이 검색 화면에서는 전혀 드러나지 않고 있습니다. 사진만 손봐도 지금 순위 그대로 예약이 늘 자리입니다.">${esc(p.comment||'')}</textarea>
+      </label>
+      <p class="sub" style="margin:6px 0 0">비워두면 진단서에서 이 항목이 통째로 빠집니다.</p>
+    </div>
+  </div>
+
+  <!-- 영업 -->
+  <div class="acc" data-a="sales">
+    <div class="hd"><span class="ar">▶</span>영업 기록${p.managed ? '<span class="pill blue" style="margin-left:7px">관리 중</span>' : ''}<span class="cnt">${(p.visits||[]).length}건</span></div>
+    <div class="bd">
+      <label class="f" style="margin-top:11px"><span class="lb">사장님이 가장 아파하는 문제</span>
+        <textarea data-sl="painPoint" placeholder="대화에서 나온 말을 그대로 적어두면 다음 방문에 그대로 씁니다">${esc(p.painPoint||'')}</textarea>
+      </label>
+      <div class="g2">
+        <label class="f"><span class="lb">다음 방문 예정일</span><input type="date" data-sld="nextVisit" value="${p.nextVisit ?? ''}"></label>
+        <label class="f"><span class="lb">진행 단계</span>
+          <select data-sl="stage">
+            ${['미접촉','진단서 전달','상담 진행','제안 완료','계약','보류'].map(s=>`<option ${p.stage===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="chk"><input type="checkbox" data-mg ${p.managed ? 'checked':''}><span>우리가 광고를 관리 중인 펜션</span></div>
+      <label class="f" style="margin-top:13px"><span class="lb">메모 · 우리끼리 (인쇄 안 됨)</span>
+        <textarea data-sl="memo" placeholder="방문 기록, 특이사항">${esc(p.memo||'')}</textarea>
+      </label>
+    </div>
+  </div>
+
+  <div style="height:8px"></div>
+  <div class="savebar">
+    <button class="btn sec" id="backList">목록</button>
+    <button class="btn grow" id="saveP">조사 내용 저장</button>
+  </div>`;
+
+  /* 아코디언 */
+  el.querySelectorAll('.acc > .hd').forEach(h => h.onclick = () => h.parentElement.classList.toggle('open'));
+
+  /* 금액칸 아래에 자릿수를 읽어줍니다 (25000 을 잘못 친 경우를 바로 잡기 위함) */
+  el.querySelectorAll('[data-money]').forEach(i => {
+    const hint = i.parentElement.querySelector('.mhint');
+    const paint = () => { const v = num(i.value); hint.textContent = (v != null && v > 0) ? won(v) : ''; };
+    i.oninput = paint; paint();
+  });
+
+  /* 최근 활동 — 고르는 즉시 몇 점인지, 지난 조사와 무엇이 달라졌는지 보여줍니다 */
+  const rcHint = $('#rcHint');
+  if(rcHint){
+    const readRc = () => {
+      const r = {};
+      el.querySelectorAll('[data-rcs]').forEach(i => r[i.dataset.rcs] = i.value || null);
+      el.querySelectorAll('[data-rcd]').forEach(i => r[i.dataset.rcd] = i.value || null);
+      el.querySelectorAll('[data-rcb]').forEach(i => r[i.dataset.rcb] = i.checked);
+      return r;
+    };
+    const paintRc = () => {
+      const r = readRc();
+      const s = scoreRecentRaw(r);
+      if(s == null){
+        rcHint.innerHTML = '네 가지 중 아는 것만 골라도 됩니다. 고른 항목끼리만 계산합니다.';
+        return;
+      }
+      const done = recentAnswered(r);
+      const parts = recentParts(r);
+      const bits = [];
+      if(parts.vol    != null) bits.push(`사진 ${rcLabel(RECENT_VOL, r.vol)}`);
+      if(parts.season != null) bits.push(`계절 ${rcLabel(RECENT_SEASON, r.season)}`);
+      if(parts.video  != null) bits.push(`영상 ${rcLabel(RECENT_VIDEO, r.video)}`);
+      if(parts.news   != null) bits.push(r.noNews ? '소식 없음'
+        : `소식 ${daysSince(r.newsDate)}일 전`);
+      let html = `${bits.join(' · ')} → 최근 활동 <b>${s}점</b>`;
+      if(done < 4) html += ` <span style="color:var(--muted)">(4개 중 ${done}개 기준)</span>`;
+      const dl = recentDelta(p, r);
+      if(dl && dl.gap != null){
+        const sign = dl.gap > 0 ? '+' : '';
+        html += `<br>지난 조사 ${dl.prev.d} 대비 <b>${sign}${dl.gap}점</b>`;
+        if(dl.lines.length) html += ` · ${dl.lines.join(' · ')}`;
+      }else{
+        html += `<br><span style="color:var(--muted)">첫 조사입니다. 저장하면 기준점이 되고, 다음 조사부터 변화가 나옵니다.</span>`;
+      }
+      rcHint.innerHTML = html;
+    };
+    el.querySelectorAll('[data-rcs],[data-rcd],[data-rcb]').forEach(i => {
+      i.oninput = paintRc; i.onchange = paintRc;
+    });
+    paintRc();
+  }
+  $('#backList').onclick = () => switchTab('list');
+  $('#goReport').onclick = () => switchTab('report');
+  $('#editBasic').onclick = () => basicModal(p);
+  $('#editKw').onclick = () => keywordModal(p);
+  $('#delP').onclick = () => confirmBox('펜션을 삭제할까요?',
+    `<b>${esc(p.name)}</b>의 조사 자료가 모두 지워집니다. 되돌릴 수 없습니다.`, '삭제',
+    async () => { await deletePension(p.id); state.cur = null; toast('삭제했습니다'); switchTab('list'); });
+  $('#saveP').onclick = () => collectAndSave(p);
+}
+
+/* 조사 회차 기록 표 (최근 활동 아코디언 아래에 붙습니다) */
+function renderRecentLog(p){
+  const lg = Array.isArray(p.recentLog) ? p.recentLog.slice().reverse() : [];
+  if(!lg.length) return '';
+  return `
+    <div style="margin-top:13px">
+      <div class="lb" style="margin-bottom:6px">조사 기록 ${lg.length}회</div>
+      <table class="bm">
+        <tr><th>조사일</th><th>사진</th><th>계절</th><th>영상</th><th>점수</th></tr>
+        ${lg.map(x => `<tr>
+          <td>${x.d}</td>
+          <td>${rcLabel(RECENT_VOL, x.vol) ?? '–'}</td>
+          <td>${rcLabel(RECENT_SEASON, x.season) ?? '–'}</td>
+          <td>${rcLabel(RECENT_VIDEO, x.video) ?? '–'}</td>
+          <td style="font-weight:700;color:${x.s!=null?barColor(x.s):'var(--muted)'}">${x.s ?? '–'}</td>
+        </tr>`).join('')}
+      </table>
+      <p class="sub" style="margin:7px 0 0">저장할 때마다 한 줄씩 쌓입니다. 관리 중 펜션은 이 표가 그대로 성과 자료가 됩니다.</p>
+    </div>`;
+}
+
+function renderScoreBars(sc, b){
+  return `<div class="scoreset">${AREAS.map(a => {
+    const v = sc[a.k], bv = b ? b.areas[a.k] : null;
+    return `<div class="sbar">
+      <div class="nm">${a.n}</div>
+      <div class="track">
+        ${v != null ? `<div class="fill" style="width:${v}%;background:${barColor(v)}"></div>` : ''}
+        ${bv != null ? `<div class="mark" style="left:${bv}%"></div>` : ''}
+      </div>
+      <div class="vl" style="color:${v!=null?barColor(v):'var(--muted)'}">${v==null?'–':Math.round(v)}</div>
+    </div>`;
+  }).join('')}</div>
+  ${b ? `<div class="legend"><i></i> 표시는 조사한 ${b.n}곳의 평균입니다</div>` : ''}`;
+}
+
+async function collectAndSave(p){
+  const el = $('#t-survey');
+  el.querySelectorAll('[data-rank]').forEach(i => { const v = num(i.value); if(v==null) delete p.naver.ranks[i.dataset.rank]; else p.naver.ranks[i.dataset.rank] = v; });
+  el.querySelectorAll('[data-nv]').forEach(i => p.naver[i.dataset.nv] = i.checked);
+  el.querySelectorAll('[data-nvn]').forEach(i => p.naver[i.dataset.nvn] = num(i.value));
+  el.querySelectorAll('[data-nvd]').forEach(i => p.naver[i.dataset.nvd] = i.value || null);
+  /* 최근 활동 (v1.1.6). 예전 photos · videos · lastPost 값은 건드리지 않고 그대로 둡니다. */
+  p.recent ||= {};
+  el.querySelectorAll('[data-rcs]').forEach(i => p.recent[i.dataset.rcs] = i.value || null);
+  el.querySelectorAll('[data-rcd]').forEach(i => p.recent[i.dataset.rcd] = i.value || null);
+  el.querySelectorAll('[data-rcb]').forEach(i => p.recent[i.dataset.rcb] = i.checked);
+  pushRecentLog(p);
+  el.querySelectorAll('[data-ct]').forEach(i => p.content[i.dataset.ct] = i.checked);
+  el.querySelectorAll('[data-ctn]').forEach(i => p.content[i.dataset.ctn] = num(i.value));
+  el.querySelectorAll('[data-prn]').forEach(i => p.price[i.dataset.prn] = num(i.value));
+  el.querySelectorAll('[data-sl]').forEach(i => p[i.dataset.sl] = i.value);
+  el.querySelectorAll('[data-sld]').forEach(i => p[i.dataset.sld] = i.value || null);
+  const mg = el.querySelector('[data-mg]'); if(mg) p.managed = mg.checked;
+  p.surveyedAt = today();
+
+  const ok = await savePension(p);
+  if(ok){ toast(p.managed ? '저장했습니다 · 관리 중 펜션' : '저장했습니다'); renderSurvey(); renderList(); }
+}
+
+function keywordModal(p){
+  const host = $('#modalHost');
+  const cur = kwOf(p).slice();
+
+  host.innerHTML = `<div class="modal"><div class="box">
+    <h4>${esc(p.name)} · 검색 키워드</h4>
+    <p class="sub" style="margin:-4px 0 13px">이 펜션 컨셉에 맞는 검색어만 남기세요. 다른 펜션에는 영향을 주지 않습니다. 한 줄에 하나씩 적습니다.</p>
+
+    <textarea id="kwEdit" style="min-height:120px;font-size:14.5px">${esc(cur.join('\n'))}</textarea>
+    <div class="sub" id="kwCount" style="margin:5px 0 14px"></div>
+
+    <div style="font-size:12.5px;font-weight:700;color:var(--green2);margin-bottom:6px">지역</div>
+    <div class="row" style="flex-wrap:wrap;gap:5px;margin-bottom:12px" id="kwPlaces">
+      ${KW_PLACES.map(x => `<button class="btn sec sm kwp" data-v="${esc(x)}">${esc(x)}</button>`).join('')}
+    </div>
+
+    <div style="font-size:12.5px;font-weight:700;color:var(--green2);margin-bottom:6px">컨셉을 누르면 키워드가 만들어집니다</div>
+    <div class="row" style="flex-wrap:wrap;gap:5px;margin-bottom:14px" id="kwConcepts">
+      ${KW_CONCEPTS.map(x => `<button class="btn ghost sm kwc" data-v="${esc(x)}">${esc(x)}</button>`).join('')}
+    </div>
+
+    <div class="row" style="gap:6px;margin-bottom:14px">
+      <a class="btn sec sm grow" target="_blank" rel="noopener"
+         href="https://search.naver.com/search.naver?query=${encodeURIComponent((p.region||'여수')+' 펜션')}">연관검색어 보기</a>
+      <button class="btn sec sm grow" id="kwReset">기본 키워드로</button>
+    </div>
+
+    <div class="row"><button class="btn sec grow" id="kwNo">취소</button>
+    <button class="btn grow" id="kwYes">저장</button></div>
+  </div></div>`;
+
+  const box = $('#kwEdit');
+  const lines = () => box.value.split('\n').map(s => s.trim()).filter(Boolean);
+  const uniq = a => Array.from(new Set(a));
+  const refresh = () => {
+    const n = uniq(lines()).length;
+    $('#kwCount').innerHTML = n
+      ? `키워드 <b>${n}개</b>${n > 8 ? ' · 너무 많으면 조사 시간이 길어집니다. 5개 안팎을 권합니다.' : ''}`
+      : '<span style="color:var(--amber)">키워드가 없습니다. 하나 이상 남겨주세요.</span>';
+  };
+  box.oninput = refresh; refresh();
+
+  let place = KW_PLACES[0];
+  const paintPlaces = () => host.querySelectorAll('.kwp').forEach(x => {
+    const on = x.dataset.v === place;
+    x.style.borderColor = on ? 'var(--green2)' : '';
+    x.style.background  = on ? 'var(--mint)' : '';
+    x.style.fontWeight  = on ? '800' : '';
+  });
+  host.querySelectorAll('.kwp').forEach(b => b.onclick = () => { place = b.dataset.v; paintPlaces(); });
+  paintPlaces();
+
+  host.querySelectorAll('.kwc').forEach(b => b.onclick = () => {
+    const kw = (place + ' ' + b.dataset.v).trim();
+    const list = lines();
+    if(list.includes(kw)){ toast('이미 있는 키워드입니다'); return; }
+    box.value = (box.value.trim() ? box.value.replace(/\s*$/, '') + '\n' : '') + kw;
+    refresh(); box.scrollTop = box.scrollHeight;
+  });
+
+  $('#kwReset').onclick = () => { box.value = state.settings.keywords.join('\n'); refresh(); };
+  $('#kwNo').onclick = () => host.innerHTML = '';
+
+  $('#kwYes').onclick = async () => {
+    const list = uniq(lines());
+    if(!list.length){ toast('키워드를 하나 이상 남겨주세요'); return; }
+
+    /* 목록에서 빠진 키워드 중 이미 순위를 적어둔 게 있으면 알려준다 */
+    const ranks = p.naver?.ranks || {};
+    const lost = Object.keys(ranks).filter(k => ranks[k] != null && !list.includes(k));
+
+    const apply = async () => {
+      p.keywords = list;
+      lost.forEach(k => delete p.naver.ranks[k]);
+      await savePension(p);
+      host.innerHTML = ''; toast('키워드를 저장했습니다'); renderSurvey();
+    };
+
+    if(lost.length){
+      confirmBox('적어둔 순위가 지워집니다',
+        `<b>${lost.map(esc).join(', ')}</b>의 순위 기록이 함께 삭제됩니다. 계속할까요?`,
+        '삭제하고 저장', apply);
+    }else{
+      await apply();
+    }
+  };
+
+  setTimeout(() => box.focus(), 60);
+}
+
+function basicModal(p){
+  const host = $('#modalHost');
+  host.innerHTML = `<div class="modal"><div class="box">
+    <h4>기본 정보</h4>
+    <label class="f"><span class="lb">펜션명</span><input type="text" id="bName" value="${esc(p.name)}"></label>
+    <div class="g2">
+      <label class="f"><span class="lb">지역</span><select id="bRegion">${state.settings.regions.map(r=>`<option ${p.region===r?'selected':''}>${r}</option>`).join('')}</select></label>
+      <label class="f"><span class="lb">객실 수</span><input type="number" id="bRooms" value="${p.rooms ?? ''}"></label>
+      <label class="f"><span class="lb">사장님 성함</span><input type="text" id="bOwner" value="${esc(p.owner||'')}"></label>
+      <label class="f"><span class="lb">연락처</span><input type="tel" id="bPhone" value="${esc(p.phone||'')}"></label>
+    </div>
+    <label class="f"><span class="lb">주소</span><input type="text" id="bAddr" value="${esc(p.addr||'')}"></label>
+    <div class="row"><button class="btn sec grow" id="bNo">취소</button><button class="btn grow" id="bYes">저장</button></div>
+  </div></div>`;
+  $('#bNo').onclick = () => host.innerHTML = '';
+  $('#bYes').onclick = async () => {
+    const nm = $('#bName').value.trim();
+    if(!nm){ toast('펜션명을 입력하세요'); return; }
+    p.name = nm; p.region = $('#bRegion').value; p.rooms = num($('#bRooms').value);
+    p.owner = $('#bOwner').value.trim(); p.phone = $('#bPhone').value.trim(); p.addr = $('#bAddr').value.trim();
+    await savePension(p); host.innerHTML = ''; toast('저장했습니다'); renderSurvey();
+  };
+}
+
+function addModal(){
+  const host = $('#modalHost');
+  host.innerHTML = `<div class="modal"><div class="box">
+    <h4>조사할 펜션 등록</h4>
+    <label class="f"><span class="lb">펜션명</span><input type="text" id="aName" placeholder="예: 아이테르 풀빌라"></label>
+    <div class="g2">
+      <label class="f"><span class="lb">지역</span><select id="aRegion">${state.settings.regions.map(r=>`<option>${r}</option>`).join('')}</select></label>
+      <label class="f"><span class="lb">객실 수</span><input type="number" id="aRooms" placeholder="선택"></label>
+    </div>
+    <div class="chk" style="margin-bottom:10px"><input type="checkbox" id="aManaged"><span>우리가 광고를 관리 중인 펜션</span></div>
+    <p class="sub" style="margin:0 0 14px">기본 키워드로 시작합니다. 등록 후 조사 화면에서 이 펜션 컨셉에 맞게 바꿀 수 있습니다.</p>
+    <div class="row"><button class="btn sec grow" id="aNo">취소</button><button class="btn grow" id="aYes">등록하고 조사 시작</button></div>
+  </div></div>`;
+  $('#aNo').onclick = () => host.innerHTML = '';
+  $('#aYes').onclick = async () => {
+    const nm = $('#aName').value.trim();
+    if(!nm){ toast('펜션명을 입력하세요'); return; }
+    const p = { id: uid(), name: nm, region: $('#aRegion').value, rooms: num($('#aRooms').value),
+      managed: $('#aManaged').checked, stage:'미접촉', keywords: [...state.settings.keywords],
+      naver:{ranks:{}}, ota:{}, content:{}, price:{}, recent:{}, recentLog:[], priceUnitWon:true,
+      createdAt: new Date().toISOString() };
+    await savePension(p);
+    host.innerHTML = ''; toast('등록했습니다'); openSurvey(p.id);
+  };
+  setTimeout(()=>$('#aName').focus(), 60);
+}
+
+/* ═══════════ 렌더: 벤치마크 ═══════════ */
+function renderBench(){
+  const el = $('#t-bench');
+  const done = state.pensions.filter(surveyed);
+  if(!done.length){
+    el.innerHTML = `<div class="empty"><div class="big">아직 조사한 펜션이 없습니다</div>
+      <div class="sub">한 곳이라도 조사하면 평균이 만들어집니다. 조사가 쌓일수록 진단서의 설득력이 올라갑니다.</div></div>`;
+    return;
+  }
+  const b = benchmark(null);
+  const managed = done.filter(p => p.managed), target = done.filter(p => !p.managed);
+  const avg = arr => arr.length ? Math.round(arr.reduce((a,c)=>a+c,0)/arr.length) : null;
+  const mAvg = avg(managed.map(totalScore)), tAvg = avg(target.map(totalScore));
+
+  el.innerHTML = `
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div class="grow"><div style="font-size:17px;font-weight:800">여수권 벤치마크</div>
+      <div class="sub">조사 완료 ${done.length}곳 기준 · ${today()}</div></div>
+      <div style="text-align:center"><div class="scorechip" style="color:var(--green2)">${Math.round(b.total)}</div><small>평균</small></div>
+    </div>
+    ${renderScoreBars(b.areas, null)}
+  </div>
+
+  ${managed.length && target.length ? `
+  <h2 class="sec">관리 중 vs 영업 대상</h2>
+  <div class="card">
+    <div class="row" style="gap:10px;text-align:center">
+      <div class="grow" style="background:var(--mint2);border-radius:var(--rs);padding:13px">
+        <div style="font-size:11.5px;font-weight:700;color:var(--green2)">우리가 관리 중 (${managed.length}곳)</div>
+        <div class="scorechip" style="color:var(--green2);margin-top:5px">${mAvg}</div>
+      </div>
+      <div class="grow" style="background:#F6F4F1;border-radius:var(--rs);padding:13px">
+        <div style="font-size:11.5px;font-weight:700;color:var(--muted)">영업 대상 (${target.length}곳)</div>
+        <div class="scorechip" style="color:var(--muted);margin-top:5px">${tAvg}</div>
+      </div>
+    </div>
+    <p class="sub" style="margin:12px 0 0">${mAvg > tAvg
+      ? `관리 중인 펜션이 평균 <b>${mAvg - tAvg}점</b> 높습니다. 영업할 때 그대로 쓸 수 있는 숫자입니다.`
+      : '아직 차이가 뚜렷하지 않습니다. 조사 표본이 쌓이면 다시 보세요.'}</p>
+  </div>` : ''}
+
+  <h2 class="sec">검색어별 평균 순위</h2>
+  <div class="card flat"><table class="bm">
+    <tr><th>검색어</th><th>평균 순위</th><th>최고</th><th>조사</th></tr>
+    ${(() => {
+      const rows = allKeywords().map(k => {
+        const vs = done.map(p => p.naver?.ranks?.[k]).filter(v => v != null);
+        return { k, n: vs.length, avg: vs.length ? vs.reduce((a,c)=>a+c,0)/vs.length : null, best: vs.length ? Math.min(...vs) : null };
+      }).filter(r => r.n > 0).sort((a,c) => c.n - a.n || a.avg - c.avg);
+      if(!rows.length) return `<tr><td colspan="4" style="color:var(--muted)">아직 기록된 순위가 없습니다</td></tr>`;
+      return rows.map(r => `<tr><td>${esc(r.k)}</td><td>${fmt(r.avg)}위</td>
+        <td>${r.best}위</td><td>${r.n}곳</td></tr>`).join('');
+    })()}
+  </table>
+  <p class="sub" style="padding:10px 12px;margin:0">펜션마다 키워드가 다르므로, 조사한 곳이 많은 검색어일수록 평균이 정확합니다.</p>
+  </div>
+
+  <h2 class="sec">지표별 평균</h2>
+  <div class="card flat"><table class="bm">
+    <tr><th>지표</th><th>여수권 평균</th></tr>
+    ${[['업체사진 분량 점수', b.volAvg, '점'],
+       ['소식 마지막 게시', b.newsDays, '일 전'],
+       ['영상 보유 비율', b.videoRate, '%'],
+       ['최신 사진이 지금 계절인 곳', b.seasonRate, '%'],
+       ['방문자 리뷰 수', b.visitorReviews, '건'],['블로그 리뷰 수', b.blogReviews, '건'],
+       ['주말 객단가', b.weekend, '원'],['주중 객단가', b.weekday, '원'],
+       ['성수기 가동률', b.peakOcc, '%'],['비수기 가동률', b.offOcc, '%'],['주중 가동률', b.weekdayOcc, '%']]
+      .map(([n,v,u]) => `<tr><td>${n}</td><td>${v==null?'–':(u==='원'?wonN(v):fmt(v))+u}</td></tr>`).join('')}
+  </table></div>
+
+  <h2 class="sec">점수 순위</h2>
+  <div class="card flat"><table class="bm">
+    <tr><th>펜션</th><th>네이버</th><th>최근</th><th>리뷰</th><th>종합</th></tr>
+    ${done.slice().sort((a,c)=>totalScore(c)-totalScore(a)).map(p => {
+      const s = scores(p), t = totalScore(p);
+      return `<tr class="${p.managed?'me':''}"><td>${esc(p.name)}${p.managed?' ·':''}</td>
+        <td>${s.naver ?? '–'}</td><td>${s.recent ?? '–'}</td><td>${s.review ?? '–'}</td>
+        <td style="color:${barColor(t)};font-weight:800">${t}</td></tr>`;
+    }).join('')}
+  </table>
+  <p class="sub" style="padding:10px 12px;margin:0">· 표시는 우리가 관리 중인 펜션입니다.</p>
+  </div>`;
+}
+
+/* ═══════════ 렌더: 진단서 ═══════════ */
+function renderReport(){
+  const el = $('#t-report');
+  const p = state.pensions.find(x => x.id === state.cur);
+  if(!p || !surveyed(p)){
+    el.innerHTML = `<div class="empty"><div class="big">진단서를 만들 펜션을 고르세요</div>
+      <div class="sub">목록에서 펜션을 누르고 조사 내용을 저장하면 진단서가 자동으로 만들어집니다.</div></div>`;
+    return;
+  }
+  const b = benchmark(p.id), sc = scores(p), t = totalScore(p), g = grade(t);
+  const fs = findings(p);
+  const top3 = fs.slice(0,3);
+
+  const cmp = (mine, bench, unit, lowerBetter) => {
+    const isWon = unit === '원';
+    const f = v => isWon ? wonN(v) : fmt(v);
+    const tol = isWon ? 5000 : 0.5;
+    if(mine == null) return '–';
+    if(bench == null) return f(mine)+unit;
+    const d = mine - bench;
+    const good = lowerBetter ? d < 0 : d > 0;
+    if(Math.abs(d) < tol) return `${f(mine)}${unit} <span class="pill gray">평균 수준</span>`;
+    return `${f(mine)}${unit} <span class="pill ${good?'':'red'}">평균 ${good?'우위':'미달'} ${f(Math.abs(d))}${unit}</span>`;
+  };
+
+  /* 항목 번호를 자동으로 매깁니다. 소견을 안 쓰면 그 자리가 빠지고 번호가 당겨집니다. */
+  let sn = 0; const N = () => ++sn;
+  const opinion = (p.comment || '').trim();
+  const nl2br = s => esc(s).replace(/\n/g, '<br>');
+
+  el.innerHTML = `
+  <div class="row noprint" style="margin-bottom:12px">
+    <button class="btn sec grow" id="repBack">조사 화면</button>
+    <button class="btn grow" id="repPrint">인쇄 · PDF 저장</button>
+  </div>
+  <p class="sub noprint" style="margin:-4px 0 14px">인쇄 창에서 대상을 <b>PDF로 저장</b>으로 바꾸면 파일로 남길 수 있습니다.</p>
+
+  <div class="card noprint" style="padding:13px;margin-bottom:14px">
+    <div class="row" style="margin-bottom:8px;align-items:center">
+      <div class="grow" style="font-size:12.5px;font-weight:700;color:var(--green2)">담당자 소견 · 진단서에 인쇄됩니다</div>
+      ${(p.memo||'').trim() ? '<button class="btn ghost sm" id="repFromMemo" style="flex-shrink:0">조사 메모 가져오기</button>' : ''}
+    </div>
+    <textarea id="repComment" rows="4" placeholder="조사하며 느낀 점을 적으세요. 사장님이 읽는 글입니다.">${esc(p.comment||'')}</textarea>
+    <div class="row" style="margin-top:9px">
+      <button class="btn grow" id="repSaveComment">소견 저장</button>
+    </div>
+    <p class="sub" style="margin:8px 0 0">영업 기록의 메모는 인쇄되지 않습니다. 여기 적은 것만 나갑니다.</p>
+  </div>
+
+  <div id="report"><div class="rep">
+    <div class="rhead">
+      <div class="t1">무료 온라인 노출 진단서</div>
+      <div class="t2">${esc(p.name)}</div>
+      <div class="t3">${esc(p.region||'')} ${p.rooms?'· '+p.rooms+'실':''} · 진단일 ${p.surveyedAt || today()}</div>
+    </div>
+    <div class="rbody">
+
+      <h3>${N()}. 종합 진단</h3>
+      <div class="row" style="align-items:flex-start;gap:16px;margin-bottom:14px">
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:44px;font-weight:800;line-height:1;color:${g.c}">${t}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">100점 만점</div>
+          <div class="pill ${g.p}" style="margin-top:6px">${g.t}</div>
+        </div>
+        <div class="grow">${renderScoreBars(sc, b)}</div>
+      </div>
+      ${b ? `<p class="sub" style="margin:0 0 4px">막대 위 검은 표시는 저희가 조사한 여수권 ${b.n}곳의 평균입니다. 이 펜션의 종합 점수는 평균 ${Math.round(b.total)}점 대비 <b style="color:${t>=b.total?'var(--green2)':'var(--red)'}">${t>=b.total?'+':''}${t - Math.round(b.total)}점</b>입니다.</p>` : ''}
+
+      <h3>${N()}. 가장 시급한 ${top3.length}가지</h3>
+      <ol class="urgent">
+        ${top3.map(f => `<li><b>${esc(f.t)}</b><br><span class="sub">${esc(f.why)}</span></li>`).join('')}
+      </ol>
+
+      <h3>${N()}. 네이버 검색 노출</h3>
+      <table class="bm">
+        <tr><th>검색어</th><th>현재 순위</th><th>여수권 평균</th></tr>
+        ${kwOf(p).map(k => {
+          const r = p.naver?.ranks?.[k], br = b?.ranks?.[k];
+          return `<tr><td>${esc(k)}</td>
+            <td style="color:${r==null?'var(--muted)':barColor(rankScore(r)||0)};font-weight:700">${r ? r+'위' : '미노출'}</td>
+            <td>${br ? fmt(br.avg)+'위' : '–'}</td></tr>`;
+        }).join('')}
+      </table>
+      <table class="bm" style="margin-top:10px">
+        <tr><th>항목</th><th>현재</th></tr>
+        <tr><td>플레이스 등록</td><td>${p.naver?.place ? '등록됨' : '<b style="color:var(--red)">미등록</b>'}</td></tr>
+        <tr><td>네이버 예약 연동</td><td>${p.naver?.booking ? '연동됨' : '<b style="color:var(--red)">미연동</b>'}</td></tr>
+        <tr><td>방문자 리뷰</td><td>${cmp(p.naver?.visitorReviews, b?.visitorReviews, '건', false)}</td></tr>
+        <tr><td>블로그 리뷰</td><td>${cmp(p.naver?.blogReviews, b?.blogReviews, '건', false)}</td></tr>
+        <tr><td>최근 리뷰</td><td>${p.naver?.lastReview || '–'}</td></tr>
+      </table>
+
+      <h3>${N()}. 최근 활동</h3>
+      <table class="bm">
+        <tr><th>항목</th><th>이 펜션</th><th>여수권 평균</th></tr>
+        <tr><td>업체사진 분량</td>
+          <td style="color:${p.recent?.vol==='none'?'var(--red)':'inherit'};font-weight:700">${rcLabel(RECENT_VOL, p.recent?.vol) ?? '–'}</td>
+          <td>${b?.volAvg != null ? fmt(b.volAvg)+'점' : '–'}</td></tr>
+        <tr><td>최신 사진의 계절</td>
+          <td style="color:${p.recent?.season==='old'?'var(--red)':'inherit'};font-weight:700">${rcLabel(RECENT_SEASON, p.recent?.season) ?? '–'}</td>
+          <td>${b?.seasonRate != null ? b.seasonRate+'%가 지금 계절' : '–'}</td></tr>
+        <tr><td>영상 · 클립</td>
+          <td style="color:${p.recent?.video==='none'?'var(--red)':'inherit'};font-weight:700">${rcLabel(RECENT_VIDEO, p.recent?.video) ?? '–'}</td>
+          <td>${b?.videoRate != null ? b.videoRate+'%가 보유' : '–'}</td></tr>
+        <tr><td>소식 마지막 게시</td>
+          <td style="font-weight:700">${(() => {
+            if(p.recent?.noNews) return '<span style="color:var(--red)">소식 없음</span>';
+            const dn = daysSince(p.recent?.newsDate);
+            if(dn == null) return '–';
+            return `${p.recent.newsDate} <span class="pill ${dn>90?'red':dn>30?'amber':''}">${dn}일 전</span>`;
+          })()}</td>
+          <td>${b?.newsDays != null ? fmt(b.newsDays)+'일 전' : '–'}</td></tr>
+        <tr><td>최근 활동 점수</td>
+          <td style="font-weight:800;color:${sc.recent!=null?barColor(sc.recent):'var(--muted)'}">${sc.recent ?? '–'}점</td>
+          <td>${b?.areas?.recent != null ? fmt(b.areas.recent)+'점' : '–'}</td></tr>
+      </table>
+      ${(() => {
+        const lg = Array.isArray(p.recentLog) ? p.recentLog : [];
+        if(lg.length < 2) return '';
+        const first = lg[0], last = lg[lg.length - 1];
+        const gap = (last.s != null && first.s != null) ? last.s - first.s : null;
+        return `<p class="sub" style="margin:8px 0 0"><b>조사 기록 ${lg.length}회</b> · 첫 조사 ${first.d} ${first.s ?? '–'}점 → 이번 ${last.d} ${last.s ?? '–'}점${
+          gap != null ? ` (${gap > 0 ? '+' : ''}${gap}점)` : ''}</p>`;
+      })()}
+      <p class="sub" style="margin:8px 0 0">네이버는 최근 활동이 있는 업체를 위로 올립니다. 사진과 소식이 멈춰 있으면 이미 올려둔 순위도 시간이 지나며 함께 내려갑니다. 네이버가 등록 날짜를 공개하지 않으므로, 위 항목은 조사 시점에 화면에 보이는 그대로를 기록한 것입니다.</p>
+
+      <div class="pagebreak"></div>
+
+      <h3>${N()}. 사진 · 콘텐츠</h3>
+      <table class="bm">
+        <tr><th>점검 항목</th><th>상태</th></tr>
+        ${CONTENT_ITEMS.map(([k,label]) => `<tr><td>${label}</td>
+          <td>${p.content?.[k] ? '○' : '<b style="color:var(--red)">개선 필요</b>'}</td></tr>`).join('')}
+        <tr><td>리뷰 답글률</td><td>${p.content?.replyRate != null ? p.content.replyRate+'%' : '–'}</td></tr>
+      </table>
+
+      <h3>${N()}. 가격 · 예약 흐름</h3>
+      <table class="bm">
+        <tr><th>구분</th><th>현재</th><th>여수권 평균</th></tr>
+        ${[['주말 객단가', p.price?.weekend, b?.weekend, '원'],
+           ['주중 객단가', p.price?.weekday, b?.weekday, '원'],
+           ['성수기 가동률', p.price?.peakOcc, b?.peakOcc, '%'],
+           ['비수기 가동률', p.price?.offOcc, b?.offOcc, '%'],
+           ['주중 가동률', p.price?.weekdayOcc, b?.weekdayOcc, '%']]
+          .map(([n,v,bv,u]) => { const f = x => u==='원' ? wonN(x) : fmt(x);
+            return `<tr><td>${n}</td><td>${v==null?'–':f(v)+u}</td><td>${bv==null?'–':f(bv)+u}</td></tr>`; }).join('')}
+      </table>
+
+      ${opinion ? `
+      <h3>${N()}. 담당자 소견</h3>
+      <div class="opinion">${nl2br(opinion)}
+        <div class="by">${COMPANY.name} · ${esc(COMPANY.ceo)}</div>
+      </div>` : ''}
+
+      <h3>${N()}. 개선 제안</h3>
+      ${fs.length ? `<ol class="urgent">${fs.slice(0,8).map(f=>`<li><b>${esc(f.t)}</b><br><span class="sub">${esc(f.why)}</span></li>`).join('')}</ol>`
+        : '<p class="sub">현재 뚜렷한 문제가 발견되지 않았습니다. 유지 관리에 집중하시면 됩니다.</p>'}
+
+      <h3>${N()}. 저희가 도와드릴 수 있는 부분</h3>
+      <table class="bm">
+        <tr><th>서비스</th><th>내용</th></tr>
+        <tr><td>광고 대행</td><td style="text-align:left">네이버 플레이스 · 블로그 관리, 검색 순위 관리, 리뷰 관리, 사진 · 영상 · 상세페이지 제작</td></tr>
+        <tr><td>운영 앱</td><td style="text-align:left">예약관리 앱 + 직원 업무관리 앱 무상 제공</td></tr>
+        <tr><td>인력 · 시설</td><td style="text-align:left">청소 인력 관리, 수영장 · 설비 점검, 객실 가전 렌탈</td></tr>
+        <tr><td>부동산</td><td style="text-align:left">펜션 시세 · 매매 · 임대 · 창업 상담</td></tr>
+      </table>
+      <p class="sub" style="margin-top:10px">저희가 관리 중인 아이테르 풀빌라는 광고 시작 1개월 만에 예약이 300% 이상 늘었습니다. 다만 펜션의 위치 · 객실 수 · 시설 상태에 따라 결과는 달라질 수 있습니다.</p>
+
+      <div class="repfoot">
+        <div class="co">${COMPANY.name}</div>
+        <div>대표이사 ${COMPANY.ceo} · ${COMPANY.addr}</div>
+        <div style="font-size:16px;font-weight:800;margin-top:5px">${COMPANY.phone}</div>
+        <div style="font-size:11.5px;color:#B7D8C3;margin-top:4px">${COMPANY.extra}</div>
+      </div>
+    </div>
+  </div></div>`;
+
+  $('#repBack').onclick = () => switchTab('survey');
+  $('#repPrint').onclick = () => window.print();
+
+  /* 소견 저장 — 저장하면 진단서를 다시 그려 인쇄 화면에 바로 반영합니다 */
+  $('#repSaveComment').onclick = async () => {
+    p.comment = $('#repComment').value.trim();
+    const ok = await savePension(p);
+    if(ok){ toast(p.comment ? '소견을 저장했습니다' : '소견을 비웠습니다'); renderReport(); }
+  };
+  /* 영업 메모를 소견칸으로 불러옵니다. 이미 쓴 내용이 있으면 확인을 받습니다. */
+  const fm = $('#repFromMemo');
+  if(fm) fm.onclick = () => {
+    const ta = $('#repComment');
+    const bring = () => { ta.value = (p.memo || '').trim(); ta.focus(); toast('메모를 불러왔습니다 · 고쳐 쓰고 저장하세요'); };
+    if(ta.value.trim()){
+      confirmBox('소견을 메모로 바꿀까요?',
+        '지금 적혀 있는 소견이 조사 메모 내용으로 덮어씌워집니다. 저장하기 전이라면 되돌릴 수 있습니다.',
+        '가져오기', () => bring());
+    }else bring();
+  };
+}
+
+/* ═══════════ 렌더: 설정 ═══════════ */
+function renderSet(){
+  const el = $('#t-set');
+  const inst = isStandalone()
+    ? `<div style="padding:11px;background:var(--mint2);border-radius:var(--rs);font-size:13.5px;color:var(--green)">
+         <b>설치된 앱으로 실행 중입니다.</b>
+       </div>`
+    : installPrompt
+      ? `<p class="sub" style="margin:0 0 11px">홈 화면에 설치하면 주소창 없이 앱처럼 열리고, 인터넷이 끊겨도 화면이 뜹니다.</p>
+         <button class="btn full" id="instBtn">홈 화면에 설치</button>`
+      : `<p class="sub" style="margin:0">이 브라우저에서는 메뉴에서 직접 설치합니다.<br><br>
+         <b>아이폰 · 사파리</b> — 아래 공유 버튼 → 홈 화면에 추가<br>
+         <b>안드로이드 · 크롬</b> — 오른쪽 위 ⋮ → 앱 설치<br>
+         <b>데스크탑 · 크롬/엣지</b> — 주소창 오른쪽 설치 아이콘</p>`;
+
+  el.innerHTML = `
+  <h2 class="sec">앱 설치</h2>
+  <div class="card">${inst}</div>
+
+  <h2 class="sec">기본 키워드</h2>
+  <div class="card">
+    <p class="sub" style="margin:0 0 11px">펜션을 새로 등록할 때 처음 들어가는 검색어입니다. 등록한 뒤에는 조사 화면의 <b>키워드 편집</b>에서 펜션마다 따로 바꿉니다. 여기를 고쳐도 이미 등록된 펜션은 바뀌지 않습니다.</p>
+    <textarea id="kwBox" style="min-height:130px">${state.settings.keywords.join('\n')}</textarea>
+    <button class="btn full" style="margin-top:10px" id="kwSave">기본 키워드 저장</button>
+  </div>
+
+  <h2 class="sec">자료 백업</h2>
+  <div class="card">
+    <p class="sub" style="margin:0 0 11px">조사 자료 전체를 파일로 내려받거나, 백업 파일에서 되살립니다. Firebase를 아직 안 붙이셨다면 작업 후 꼭 내려받으세요.</p>
+    <div class="row">
+      <button class="btn sec grow" id="expBtn">백업 내려받기</button>
+      <button class="btn sec grow" id="impBtn">백업 불러오기</button>
+    </div>
+    <input type="file" id="impFile" accept="application/json" class="hide">
+    <button class="btn sec full" style="margin-top:8px" id="csvBtn">엑셀용 CSV 내려받기</button>
+  </div>
+
+  <h2 class="sec">Firebase 연결</h2>
+  <div class="card">
+    <p class="sub" style="margin:0">같은 폴더의 <b>config.js</b> 에 프로젝트 정보를 넣으면 자료가 서버에 저장되고 여러 기기에서 같이 보입니다.
+    기존 펜션 앱과 같은 프로젝트를 써도 됩니다. 컬렉션 이름은 <b>scanPensions</b>, <b>scanConfig</b>라 기존 자료와 섞이지 않습니다.</p>
+    <div style="margin-top:11px;padding:11px;background:var(--paper);border-radius:var(--rs);font-size:12.5px">
+      현재 상태 : <b style="color:${useFB?'var(--green2)':'var(--amber)'}">${useFB ? 'Firebase 연결됨' : '임시 저장 모드'}</b><br>
+      등록 펜션 : <b>${state.pensions.length}곳</b> · 조사 완료 <b>${state.pensions.filter(surveyed).length}곳</b>
+    </div>
+  </div>
+
+  <h2 class="sec">이 앱에 대해</h2>
+  <div class="card">
+    <p class="sub" style="margin:0">외부 사이트를 자동으로 수집하지 않습니다. 검색 화면을 열어주고, 눈으로 확인한 값을 입력하는 방식이라 사이트 구조가 바뀌어도 고장 나지 않고 이용약관 문제도 생기지 않습니다.<br><br>
+    점수는 입력값에 따라 자동 계산되며, 진단서의 "여수권 평균"은 지금까지 조사한 펜션들의 실제 평균입니다. 조사가 쌓일수록 정확해집니다.</p>
+    <p class="sub" style="margin:11px 0 0;color:var(--muted)">StayScan v${APP_VERSION} · ${COMPANY.name}</p>
+  </div>
+
+  <h2 class="sec">수정 이력</h2>
+  <div class="card flat" style="padding:0;overflow:hidden">
+    ${CHANGELOG.map((c, i) => `
+      <div class="chg${i === 0 ? ' open' : ''}">
+        <div class="hd"><span class="ar">▶</span>v${c.v}
+          ${c.v === APP_VERSION ? '<span class="pill blue">사용 중</span>' : ''}
+          <span class="cnt">${c.d ? c.d : ''}</span></div>
+        <div class="bd"><ul>${c.items.map(t => `<li>${t}</li>`).join('')}</ul></div>
+      </div>`).join('')}
+  </div>
+  <p class="sub" style="margin:9px 2px 0;color:var(--muted);font-size:12px">오른쪽 위에 표시된 버전과 여기 <b>사용 중</b> 표시가 같은지 보면, 지금 열려 있는 파일이 최신인지 확인할 수 있습니다.</p>
+  <div style="height:20px"></div>`;
+
+  /* 수정 이력 펼치기 */
+  el.querySelectorAll('.chg > .hd').forEach(h => h.onclick = () => h.parentElement.classList.toggle('open'));
+
+  const ib = $('#instBtn'); if(ib) ib.onclick = doInstall;
+
+  $('#kwSave').onclick = async () => {
+    const list = $('#kwBox').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if(!list.length){ toast('키워드를 하나 이상 적어주세요'); return; }
+    state.settings.keywords = list; await saveSettings(); toast('키워드를 저장했습니다');
+  };
+  $('#expBtn').onclick = () => {
+    const data = JSON.stringify({ v:APP_VERSION, at:new Date().toISOString(), settings:state.settings, pensions:state.pensions }, null, 2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], {type:'application/json'}));
+    a.download = `stayscan-백업-${today()}.json`; a.click();
+    toast('백업 파일을 내려받았습니다');
+  };
+  $('#impBtn').onclick = () => $('#impFile').click();
+  $('#impFile').onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = async () => {
+      try{
+        const d = JSON.parse(r.result);
+        if(!Array.isArray(d.pensions)) throw new Error('형식이 다릅니다');
+        confirmBox('백업을 불러올까요?', `펜션 <b>${d.pensions.length}곳</b>의 자료를 불러옵니다. 같은 펜션은 덮어씁니다.`, '불러오기', async () => {
+          if(d.settings) { state.settings = { ...DEFAULT_SETTINGS, ...d.settings }; await saveSettings(); }
+          for(const p of d.pensions) await savePension(p);
+          await migratePriceUnit();   /* 예전 백업이면 객단가 단위도 함께 고칩니다 */
+          toast(`${d.pensions.length}곳을 불러왔습니다`); renderSet(); renderList();
+        });
+      }catch(err){ toast('파일을 읽지 못했습니다'); }
+    };
+    r.readAsText(f); e.target.value = '';
+  };
+  $('#csvBtn').onclick = () => {
+    const kw = allKeywords();
+    const head = ['펜션명','지역','객실수','관리중','조사일','종합점수','네이버','최근활동','리뷰','콘텐츠','공실',
+      '전용키워드',...kw.map(k=>k+' 순위'),
+      '업체사진분량','최신사진계절','영상','소식최근게시일','소식경과일','조사회차',
+      '방문자리뷰','블로그리뷰','주말객단가(원)','주중객단가(원)','주중가동률','진행단계','사장님','연락처'];
+    const rows = state.pensions.map(p => { const s = scores(p);
+      return [p.name, p.region||'', p.rooms??'', p.managed?'Y':'', p.surveyedAt||'', totalScore(p)??'',
+        s.naver??'', s.recent??'', s.review??'', s.content??'', s.occ??'',
+        kwOf(p).join(' / '),
+        ...kw.map(k => p.naver?.ranks?.[k] ?? ''),
+        rcLabel(RECENT_VOL, p.recent?.vol) ?? '',
+        rcLabel(RECENT_SEASON, p.recent?.season) ?? '',
+        rcLabel(RECENT_VIDEO, p.recent?.video) ?? '',
+        p.recent?.noNews ? '소식없음' : (p.recent?.newsDate || ''),
+        p.recent?.noNews ? '' : (daysSince(p.recent?.newsDate) ?? ''),
+        (p.recentLog || []).length || '',
+        p.naver?.visitorReviews??'', p.naver?.blogReviews??'',
+        p.price?.weekend??'', p.price?.weekday??'', p.price?.weekdayOcc??'', p.stage||'', p.owner||'', p.phone||''];
+    });
+    const csv = '\uFEFF' + [head, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download = `stayscan-${today()}.csv`; a.click();
+    toast('CSV를 내려받았습니다');
+  };
+}
+
+/* ═══════════ 탭 ═══════════ */
+function switchTab(t){
+  state.tab = t;
+  ['list','survey','bench','report','set'].forEach(x => $('#t-'+x).classList.toggle('hide', x !== t));
+  $$('#nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  if(t === 'list')   renderList();
+  if(t === 'survey') renderSurvey();
+  if(t === 'bench')  renderBench();
+  if(t === 'report') renderReport();
+  if(t === 'set')    renderSet();
+  window.scrollTo(0,0);
+}
+
+/* ═══════════ 시작 ═══════════ */
+$$('#nav button').forEach(b => b.onclick = () => switchTab(b.dataset.t));
+$('#addBtn').onclick = addModal;
+$('#q').oninput = e => { state.q = e.target.value; renderList(); };
+$$('.fchip').forEach(b => b.onclick = () => {
+  $$('.fchip').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); state.filter = b.dataset.f; renderList();
+});
+
+/* ═══════════ 앱 설치 · 서비스 워커 ═══════════ */
+let installPrompt = null;
+const isStandalone = () =>
+  window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installPrompt = e;
+  if(state.tab === 'set') renderSet();
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null; toast('설치했습니다');
+});
+
+async function doInstall(){
+  if(!installPrompt){ toast('이 브라우저에서는 메뉴에서 설치해야 합니다'); return; }
+  installPrompt.prompt();
+  const { outcome } = await installPrompt.userChoice;
+  installPrompt = null;
+  if(outcome !== 'accepted') toast('설치를 취소했습니다');
+  renderSet();
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if(!sw) return;
+        sw.addEventListener('statechange', () => {
+          if(sw.state === 'installed' && navigator.serviceWorker.controller){
+            toast('새 버전이 준비됐습니다 · 다시 열면 적용됩니다');
+          }
+        });
+      });
+      setInterval(() => reg.update(), 60 * 60 * 1000);
+    }).catch(e => console.log('서비스 워커 등록 안 됨:', e.message));
+  });
+}
+
+initDB().then(() => { renderList(); });
+</script>
+</body>
+</html>
