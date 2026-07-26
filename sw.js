@@ -4,7 +4,7 @@
      그러면 다음 실행 때 자동으로 최신본이 받아집니다.
    ═══════════════════════════════════════════ */
 
-const VERSION = '1.1.7';
+const VERSION = '1.1.8';
 const CACHE = 'stayscan-' + VERSION;
 
 const SHELL = [
