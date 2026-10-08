@@ -1,0 +1,33 @@
+{
+  "name": "거래처 관리",
+  "short_name": "거래처 관리",
+  "description": "거래처 방문 · 현황 기록",
+  "lang": "ko",
+  "id": "./stayround.html",
+  "start_url": "./stayround.html",
+  "scope": "./stayround.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF6EE",
+  "theme_color": "#FBF6EE",
+  "icons": [
+    {
+      "src": "stayround-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "stayround-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "stayround-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
