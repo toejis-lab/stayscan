@@ -313,13 +313,19 @@ table.bm td.neg{color:var(--red);font-weight:700}
      검색 링크를 열어주고, 눈으로 본 값을 입력하는 방식입니다.
    ═══════════════════════════════════════════════════ */
 
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 
 /* ── 수정 이력 ──
    설정 탭 맨 아래에 버전별로 펼쳐 볼 수 있게 나옵니다.
    새 버전을 낼 때는 APP_VERSION 을 올리고, 아래 목록 맨 위에 한 덩어리만 추가하면 됩니다.
    맨 위가 항상 최신 버전이어야 합니다. d 는 날짜, items 는 바뀐 내용 줄 목록입니다. */
 const CHANGELOG = [
+  { v:'1.6.1', d:'2026-11-05', items:[
+    '<b>순위 기록을 2페이지까지 이어서 셀 수 있습니다.</b> 네이버 숙박 목록은 한 페이지에 광고를 뺀 70곳만 보여서, 71위부터는 「목록 밖」으로 기록됐습니다. 이제 1페이지를 분석한 뒤 <b>「2페이지 이어 붙이기」</b>를 누르고 네이버 창의 2페이지를 붙여넣으면 71위부터 140위까지 이어서 셉니다.',
+    '광고 칸은 1·2페이지 모두 빼고 셉니다. 광고로 1페이지에 보인 업체도 실제 순위는 2페이지의 일반 칸 위치로 기록됩니다.',
+    '<b>같은 페이지를 두 번 붙여넣으면</b> 알려 주고 이어 붙이지 않습니다. 1페이지에 이미 나온 업체가 2페이지에 또 나오면 1페이지 순위를 남기고 알려 줍니다.',
+    '순위 추이 그래프가 140위까지 보이고, 2페이지까지 센 기록은 최근 기록에 「2페이지까지」로 표시됩니다.'
+  ]},
   { v:'1.6.0', d:'2026-10-05', items:[
     '<b>네이버 노출 점수를 하루치 순위가 아니라 기간 평균으로 계산합니다.</b> 순위 추이에 <b>최근 30일 안에 3일치 이상</b> 기록이 쌓인 키워드는 그 기간의 평균으로 점수를 냅니다. 목록 밖으로 밀린 날도 함께 반영합니다. 기록이 3일 미만인 키워드는 예전처럼 조사 화면에 적은 그날 순위를 씁니다. <b>이 때문에 기존 업체의 네이버 점수와 종합 점수가 조금 달라질 수 있습니다.</b>',
     '<b>평균을 며칠치로 냈는지 함께 보여줍니다.</b> 조사 화면의 키워드 아래와 진단서 순위표에 「30일 평균 ○위 · ○일 기록」, 「10위 안에 든 날 ○%」가 나옵니다. 기록이 모자란 키워드는 평균 대신 「기록 부족」으로 표시합니다.',
@@ -2669,6 +2675,8 @@ function renderSet(){
 
 /* 한 번에 몇 개까지 달라고 할지. 실제로 몇 곳이 나오는지는 키워드마다 다릅니다. */
 const RANK_FULL = 70;
+/* 2페이지까지 이어 붙이면 이 순위까지 셉니다 (v1.6.1) */
+const RANK_MAX = RANK_FULL * 2;
 /* 불러올 기간 (일). 너무 길면 앱이 느려집니다. */
 const RANK_LOAD_DAYS = 180;
 /* 업체명 뒤에 붙는 배지 글자. 이름에서 떼어냅니다. */
@@ -2945,6 +2953,29 @@ function rkParsePlain(text){
   return { rows:[], source:'plain', unread:true };
 }
 
+/* ── 2페이지 이어 붙이기 (v1.6.1) ──
+   네이버 숙박 목록은 한 페이지에 광고를 뺀 70곳만 보여줍니다.
+   1페이지 뒤에 2페이지의 일반 칸을 이어 붙여 71위부터 셉니다.
+   · 광고 칸은 어느 페이지든 순위에서 뺍니다(기존과 같음).
+   · 2페이지 일반 칸 절반 이상이 1페이지에 이미 있으면 같은 페이지를 또 붙인 것으로 보고 막습니다.
+   · 몇 곳만 겹치면(목록이 그 사이 조금 바뀐 경우) 1페이지 순위를 남기고 2페이지 쪽은 뺍니다.
+   플레이스 번호가 복사되지 않는 목록이라 이름으로 견줍니다. */
+function rkMergePages(p1, p2){
+  const key = r => rkNorm(r.name);
+  const a1 = p1.rows.filter(r => !r.ad);
+  const a2 = p2.rows.filter(r => !r.ad);
+  if(!a2.length) return { err:'none' };
+  const s1 = new Set(a1.map(key));
+  const dup = a2.filter(r => s1.has(key(r)));
+  if(dup.length >= Math.ceil(a2.length / 2)) return { err:'same' };
+  const rows = p1.rows.concat(p2.rows.filter(r => r.ad || !s1.has(key(r))));
+  return { parsed: {
+    rows, source: p1.source,
+    p1n: a1.length,
+    dup: dup.map(r => r.name)
+  }};
+}
+
 /* 파싱 결과를 저장할 모양으로 */
 function rkBuild(parsed, keyword, date){
   const list = rkListOf(keyword);
@@ -2964,6 +2995,7 @@ function rkBuild(parsed, keyword, date){
     date, keyword,
     items, pids, ads, list, ...stat,
     total: parsed.rows.length,
+    ...(parsed.p1n ? { pages:2, p1n:parsed.p1n } : {}),     /* 2페이지까지 센 기록 (v1.6.1) */
     source: parsed.source,
     unread: !!parsed.unread,
     at: new Date().toISOString()
@@ -3110,7 +3142,7 @@ function rkSeries(kw){
 function rkUsualCount(kw, before){
   const ns = rkSeries(kw)
     .filter(l => !before || l.date < before)
-    .map(l => (l.items || []).length).filter(n => n > 0);
+    .map(l => l.p1n || (l.items || []).length).filter(n => n > 0);   /* 2페이지 기록은 1페이지 몫만 (v1.6.1) */
   if(!ns.length) return null;
   return Math.max(...ns.slice(-5));          /* 최근 다섯 번 중 가장 많았던 수 */
 }
@@ -3389,6 +3421,8 @@ function renderScoreHist(p){
 let rkDirty = false;          /* 붙여넣기 중이면 화면을 다시 그리지 않습니다 */
 let rkHtml = '';              /* 붙여넣기한 원본 HTML */
 let rkParsed = null;          /* 분석 결과 (저장 전) */
+let rkPage1 = null;           /* 2페이지를 기다리는 1페이지 { parsed, kw, d, list } (v1.6.1) */
+let rkPageErr = '';           /* 2페이지 붙이기에 실패한 까닭 */
 
 function renderRank(){
   const el = $('#t-rank');
@@ -3428,6 +3462,9 @@ function rkRenderInput(){
   /* 이 키워드를 예전에 다른 목록으로 기록한 적이 있으면 알려줍니다 */
   const past = rkSeries(cur).map(l => l.list || 'stay');
   const mixed = past.length && past.every(x => x !== lt) ? past[past.length - 1] : '';
+  /* 2페이지를 기다리는 중인지. 키워드·날짜·목록이 바뀌었으면 버립니다 (v1.6.1) */
+  if(rkPage1 && !(rkPage1.kw === cur && rkPage1.d === d && rkPage1.list === lt)){ rkPage1 = null; rkPageErr = ''; }
+  const p1n = rkPage1 ? rkPage1.parsed.rows.filter(r => !r.ad).length : 0;
 
   $('#rkBody').innerHTML = `
     <div class="card">
@@ -3467,9 +3504,15 @@ function rkRenderInput(){
         바꾸실 거면 예전 기록은 지우고 새로 시작하시는 편이 낫습니다.</p>` : ''}
     </div>
 
-    <div class="card">
-      <textarea id="rkPaste" style="min-height:120px;font-size:13px" placeholder="여기에 붙여넣기 (Ctrl+V)"></textarea>
-      <button class="btn full" style="margin-top:10px" id="rkAnalyze">분석하기</button>
+    <div class="card"${rkPage1 ? ' style="border-color:var(--green2)"' : ''}>
+      ${rkPage1 ? `<div style="font-weight:800;font-size:15px;margin-bottom:6px">2페이지 붙여넣기 <span class="pill">1페이지 ${p1n}곳 보관 중</span></div>
+        <p class="sub" style="margin:0 0 8px">네이버 목록 창 맨 아래의 <b>2</b>를 눌러 2페이지로 넘어간 뒤,
+          목록의 <b>빈 여백</b>을 한 번 클릭하고 <b>Ctrl+A → Ctrl+C</b>, 아래 칸에 <b>Ctrl+V</b> 하세요.
+          ${p1n + 1}위부터 이어서 셉니다.</p>
+        ${rkPageErr ? `<p class="sub" id="rkPgErr" style="margin:0 0 8px;color:var(--red)">${rkPageErr}</p>` : ''}` : ''}
+      <textarea id="rkPaste" style="min-height:120px;font-size:13px" placeholder="${rkPage1 ? '여기에 2페이지 붙여넣기 (Ctrl+V)' : '여기에 붙여넣기 (Ctrl+V)'}"></textarea>
+      <button class="btn full" style="margin-top:10px" id="rkAnalyze">${rkPage1 ? '2페이지 이어서 분석' : '분석하기'}</button>
+      ${rkPage1 ? '<button class="btn ghost sm full" style="margin-top:6px" id="rkP1Back">2페이지 없이 1페이지만 저장하기로 돌아가기</button>' : ''}
     </div>
 
     <div id="rkPrev"></div>
@@ -3484,11 +3527,11 @@ function rkRenderInput(){
     <div class="card flat">
       ${recent.length ? recent.map(l => {
         const n = state.pensions.filter(p => rkRankOf(l, p)).length;
-        const bad = rkShort((l.items||[]).length, rkUsualCount(l.keyword, l.date));
+        const bad = rkShort(l.p1n || (l.items||[]).length, rkUsualCount(l.keyword, l.date));
         return `<div class="row" style="padding:11px 13px;border-bottom:1px solid var(--line2)">
           <div class="grow">
             <div style="font-weight:700;font-size:14px">${esc(l.keyword)}</div>
-            <div class="sub">${esc(l.date)} · ${RANK_LISTS[l.list||'stay'].short} · 광고 제외 ${(l.items||[]).length}개${bad?' <span style="color:var(--amber)">(지난 기록보다 적음)</span>':''} · 우리 펜션 ${n}곳</div>
+            <div class="sub">${esc(l.date)} · ${RANK_LISTS[l.list||'stay'].short} · 광고 제외 ${(l.items||[]).length}개${l.pages ? ' (2페이지까지)' : ''}${bad?' <span style="color:var(--amber)">(지난 기록보다 적음)</span>':''} · 우리 펜션 ${n}곳</div>
           </div>
           <button class="btn danger sm rkDel" data-id="${esc(l.id)}">삭제</button>
         </div>`;
@@ -3532,7 +3575,27 @@ function rkRenderInput(){
   $('#rkAnalyze').onclick = () => {
     const plain = box.value;
     if(!plain.trim() && !rkHtml){ toast('먼저 붙여넣어 주세요'); return; }
-    rkParsed = rkParse(rkHtml, plain);
+    const pg = rkParse(rkHtml, plain);
+    if(rkPage1){
+      const m = rkMergePages(rkPage1.parsed, pg);
+      if(m.err){
+        rkPageErr = m.err === 'same'
+          ? '<b>1페이지와 같은 내용입니다.</b> 네이버 창에서 맨 아래 <b>2</b>를 눌러 2페이지로 넘어갔는지 확인하고 다시 복사해 주세요.'
+          : '2페이지에서 업체를 읽지 못했습니다. 목록 창에서 <b>곧바로</b> 다시 복사해 주세요.';
+        rkHtml = ''; rkDirty = false;
+        renderRank();
+        return;
+      }
+      rkPageErr = '';
+      const pe = $('#rkPgErr'); if(pe) pe.remove();
+      rkParsed = m.parsed;
+    } else rkParsed = pg;
+    rkPreview();
+  };
+  const back = $('#rkP1Back');
+  if(back) back.onclick = () => {
+    rkParsed = rkPage1.parsed; rkPage1 = null; rkPageErr = ''; rkHtml = ''; rkDirty = false;
+    renderRank();
     rkPreview();
   };
 }
@@ -3615,10 +3678,16 @@ function rkPreview(){
   /* 어제(또는 그 이전 마지막 기록)와 비교 */
   const prev = rkSeries(kw).filter(l => l.date < d).pop();
   const usual = rkUsualCount(kw, d);
-  const many  = rkTooMany(log.items.length, usual);
-  const ok    = !rkShort(log.items.length, usual) && !many;
+  /* 2페이지까지 붙였으면 개수 점검은 페이지마다 따로 합니다 (v1.6.1) */
+  const n1 = log.p1n || log.items.length;
+  const n2 = log.pages ? log.items.length - log.p1n : 0;
+  const dupP = (log.pages && rkParsed.dup) ? rkParsed.dup : [];
+  const many  = rkTooMany(n1, usual) || rkTooMany(n2, usual);
+  const ok    = !rkShort(n1, usual) && !many;
   /* 아예 못 읽었거나 터무니없이 많으면 저장 자체를 막습니다 (v1.3.6) */
   const block = many || log.unread || !log.items.length;
+  /* 1페이지가 꽉 찼으면 2페이지를 이어 붙일 수 있습니다 */
+  const canP2 = !block && !log.pages && log.items.length >= RANK_FULL;
   const lstat = block ? null : rkListStat(log);        /* 별점·리뷰·가격을 읽었는지 (v1.6.0) */
 
   const found = [], missing = [];
@@ -3645,13 +3714,17 @@ function rkPreview(){
         <span class="pill gray">${RANK_LISTS[log.list||'stay'].short}</span>
         ${ok ? '<span class="pill">정상</span>' : '<span class="pill red">확인 필요</span>'}
       </div>
-      ${usual != null ? `<p class="sub" style="margin:4px 0 0">이 키워드는 지난 기록에서 보통 ${usual}개까지 나왔습니다.</p>` : ''}
+      ${log.pages ? `<p class="sub" style="margin:4px 0 0"><b>1페이지 ${n1}곳(1~${n1}위) + 2페이지 ${n2}곳(${n1 + 1}~${log.items.length}위)</b>을 이어서 셌습니다.</p>` : ''}
+      ${dupP.length ? `<p class="sub" style="margin:4px 0 0;color:var(--amber)">
+        2페이지 일반 칸에 1페이지에 이미 있는 곳이 ${dupP.length}곳 있었습니다(${dupP.map(esc).join(', ')}).
+        1페이지 순위를 남기고 2페이지 쪽은 빼고 셌습니다. 두 페이지를 복사한 사이에 목록이 바뀌었을 수 있습니다.</p>` : ''}
+      ${usual != null ? `<p class="sub" style="margin:4px 0 0">이 키워드는 지난 기록에서 ${log.pages ? '1페이지에 ' : ''}보통 ${usual}개까지 나왔습니다.</p>` : ''}
       ${ok ? '' : `<p class="sub" style="margin:6px 0 0;color:var(--red)">
         ${many
           ? `업체 수가 <b>있을 수 없이 많습니다.</b> 사진 설명·닉네임·리뷰 줄까지
              한 곳씩으로 센 것입니다. 이 결과는 저장할 수 없습니다.`
           : (log.items.length
-              ? `지난 기록(${usual}개)보다 눈에 띄게 적습니다.`
+              ? `${log.pages ? '1페이지가 ' : ''}지난 기록(${usual}개)보다 눈에 띄게 적습니다.`
               : '한 곳도 읽지 못했습니다.')}
         목록을 <b>맨 아래까지 스크롤한 뒤</b> Ctrl+A → Ctrl+C 로 다시 복사해 주세요.
         ${many ? '' : '이대로 저장하면 순위가 실제와 달라질 수 있습니다.'}</p>`}
@@ -3693,6 +3766,12 @@ function rkPreview(){
           <button class="btn sec sm rkFixAl" data-id="${esc(m.p.id)}">다른 이름</button>
         </div>`).join('')}` : ''}
 
+      ${canP2 ? `<div class="cover" style="margin-top:13px">
+        1페이지가 꽉 찼습니다(${log.items.length}곳). 네이버 목록 창 맨 아래에 페이지 번호가 있으면
+        <b>2페이지를 이어 붙여 ${RANK_MAX}위까지</b> 셀 수 있습니다. 1페이지는 보관해 둡니다.
+        <button class="btn sec sm full" style="margin-top:8px" id="rkNextPage">2페이지 이어 붙이기</button>
+      </div>` : ''}
+
       <div class="row" style="margin-top:16px">
         <button class="btn sec grow" id="rkCancel">취소</button>
         <button class="btn grow" id="rkSave"${block ? ' disabled style="opacity:.45"' : ''}>${block ? '저장할 수 없음' : '이대로 저장'}</button>
@@ -3705,7 +3784,20 @@ function rkPreview(){
   $$('.rkFixAl').forEach(b => b.onclick = () => {
     const q = state.pensions.find(x => x.id === b.dataset.id); if(q) rkAliasModal(q, log);
   });
-  $('#rkCancel').onclick = () => { rkParsed = null; host.innerHTML = ''; };
+  $('#rkCancel').onclick = () => {
+    /* 2페이지까지 붙인 결과를 취소하면 2페이지만 다시 붙일 수 있게 1페이지는 남깁니다 */
+    const keepP1 = !!(log.pages && rkPage1);
+    rkParsed = null; host.innerHTML = '';
+    if(!keepP1){ rkPage1 = null; rkPageErr = ''; }
+    else { rkHtml = ''; rkDirty = false; renderRank(); }
+  };
+  const np = $('#rkNextPage');
+  if(np) np.onclick = () => {
+    rkPage1 = { parsed: rkParsed, kw, d, list: log.list || 'stay' };
+    rkParsed = null; rkPageErr = ''; rkHtml = ''; rkDirty = false;
+    renderRank();
+    try{ $('#rkPaste').scrollIntoView({ behavior:'smooth', block:'center' }); $('#rkPaste').focus(); }catch(e){}
+  };
   $('#rkSave').onclick = async () => {
     if(block){ toast('잘못 읽힌 결과라 저장하지 않습니다'); return; }
     const ns = $('#rkNoStat');
@@ -3715,7 +3807,7 @@ function rkPreview(){
       await saveRankLog(log);
       await rkLearnPids(log);
       await rkSyncSurvey(log);
-      rkParsed = null; rkHtml = ''; rkDirty = false;
+      rkParsed = null; rkHtml = ''; rkDirty = false; rkPage1 = null; rkPageErr = '';
       toast(`${rkMD(d)} · ${kw} 저장했습니다`);
       renderRank();
     };
@@ -3874,8 +3966,8 @@ function rkChart(series){
   if(!dates.length) return '';
   const got = series.flatMap(s => s.pts.map(x => x.r)).filter(r => r != null);
   const maxR = got.length ? Math.max(...got) : 10;
-  const steps = [5,10,20,30,50,RANK_FULL];
-  const yMax = steps.find(v => v >= maxR) || Math.max(maxR, RANK_FULL);
+  const steps = [5,10,20,30,50,RANK_FULL,100,RANK_MAX];
+  const yMax = steps.find(v => v >= maxR) || Math.max(maxR, RANK_MAX);
 
   const xOf = d => dates.length === 1 ? (L + (W-L-R)/2)
     : L + (W-L-R) * (dates.indexOf(d) / (dates.length - 1));
