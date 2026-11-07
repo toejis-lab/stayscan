@@ -318,13 +318,21 @@ table.bm td.neg{color:var(--red);font-weight:700}
      검색 링크를 열어주고, 눈으로 본 값을 입력하는 방식입니다.
    ═══════════════════════════════════════════════════ */
 
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 
 /* ── 수정 이력 ──
    설정 탭 맨 아래에 버전별로 펼쳐 볼 수 있게 나옵니다.
    새 버전을 낼 때는 APP_VERSION 을 올리고, 아래 목록 맨 위에 한 덩어리만 추가하면 됩니다.
    맨 위가 항상 최신 버전이어야 합니다. d 는 날짜, items 는 바뀐 내용 줄 목록입니다. */
 const CHANGELOG = [
+  { v:'1.7.1', d:'2026-11-07', items:[
+    '<b>플레이스 리포트에 월간 기록이 생겼습니다.</b> 네이버 통계에서 「월간」을 고른 숫자를 <b>「월간 입력」</b> 표(최근 12개월)에 적습니다. 지난 1년치를 12줄만 채우면 됩니다. 엑셀 붙여넣기, 정리된 글로 그 달 칸 채우기도 됩니다.',
+    '1.7.0의 52주 「1년치 표」는 없앴습니다. <b>주간 입력은 그대로</b>이며, 이미 적은 주간 기록도 그대로 남습니다.',
+    '<b>월간 비교</b> : 전월 대비 · 계약 전 대비(계약 시작일이 든 달의 바로 앞 달) · 전년 같은 달 대비. B형 리뷰는 월말 「전체 ○건」을 적으면 앞 달과의 차이로 새 리뷰를 계산합니다.',
+    '맨 위 입력 현황에 <b>지난달 월간</b>을 안 적은 곳이 나옵니다. 주간은 최근 8주 안에 주간 기록을 시작한 곳만 셉니다.',
+    '추이에서 <b>월간 · 주간</b>을 골라 봅니다.',
+    '<b>광고주 보고서</b>의 플레이스 리포트가 바뀌었습니다. 보고서 달(기간 끝 날짜가 든 달, 아직 안 끝났으면 지난달)의 전월 · 계약 전 · 작년 같은 달 비교, <b>최근 12개월 월별 추이</b> 그래프와 표, 그리고 <b>그 달의 주간 기록</b>(월요일이 그 달에 있는 주)이 나옵니다.'
+  ]},
   { v:'1.7.0', d:'2026-11-06', items:[
     '<b>「플레이스 리포트」 탭이 생겼습니다.</b> 네이버 스마트플레이스 통계를 매주 월요일에 <b>지난주(월~일)</b> 기준으로 한 줄씩 적습니다. 맨 위에 관리 중인 업체 중 지난주를 아직 안 적은 곳이 나오고, 누르면 바로 입력 화면이 열립니다.',
     '<b>업체마다 네이버 화면 종류를 고릅니다</b>(리포트 설정). <b>A 리포트형</b>은 통계에 「리포트」 탭이 있는 곳으로 플레이스 유입 · 네이버지도 · 네이버검색 · 스마트콜 통화 · 예약 신청 · 리뷰 등록 · 1위 유입 키워드를 적습니다. <b>B 예약 통계형</b>은 「리포트」 탭 없이 예약 통계만 있는 곳으로 예약 유입 · 신청 · 확정 · 취소 · 리뷰 누적 건수 · 1위 키워드 · 유입 채널 비율을 적습니다. 비워 둔 칸은 그대로 저장됩니다.',
@@ -680,7 +688,9 @@ let state = { pensions: [], settings: {...DEFAULT_SETTINGS}, cur: null, tab: 'li
   benchKind: 'pension',
   rankLogs: [], rankView: 'input', rankKw: '', rankDate: '', rankPen: '', rankPeriod: '30',
   /* 플레이스 리포트 (v1.7.0) */
-  placeLogs: [], prPid: '', prView: 'week', prWeek: '', prPer: '26', prMetric: 'inflow' };
+  placeLogs: [], prPid: '', prView: 'month', prWeek: '', prPer: '26', prMetric: 'inflow',
+  /* 월간 (v1.7.1) */
+  placeMonths: [], prMonth: '', prUnit: 'month', prMPer: '12' };
 
 /* 조사·진단서 화면에 무언가 입력하던 중인지. 입력 중이면 실시간 갱신이
    화면을 갈아엎지 않고 알림만 띄웁니다(입력하던 내용이 날아가지 않게). */
@@ -1404,7 +1414,7 @@ function renderList(){
 
   el.querySelectorAll('.pitem').forEach(n => n.onclick = () => {
     const x = state.pensions.find(q => q.id === n.dataset.id);
-    if(isFood(x)){ state.prPid = x.id; state.prView = 'week'; switchTab('place'); }   /* 음식점·카페는 리포트 화면으로 */
+    if(isFood(x)){ state.prPid = x.id; switchTab('place'); }   /* 음식점·카페는 리포트 화면으로 */
     else openSurvey(n.dataset.id);
   });
 }
@@ -2110,7 +2120,7 @@ function addModal(){
     if(kind === 'food') p.placeType = 'A';
     await savePension(p);
     host.innerHTML = ''; toast('등록했습니다');
-    if(kind === 'food'){ state.prPid = p.id; state.prView = 'week'; switchTab('place'); }
+    if(kind === 'food'){ state.prPid = p.id; switchTab('place'); }
     else openSurvey(p.id);
   };
   setTimeout(()=>$('#aName').focus(), 60);
@@ -2664,7 +2674,7 @@ function renderSet(){
   };
   $('#expBtn').onclick = () => {
     const data = JSON.stringify({ v:APP_VERSION, at:new Date().toISOString(), settings:state.settings, pensions:state.pensions,
-      placeLogs: state.placeLogs }, null, 2);
+      placeLogs: state.placeLogs, placeMonths: state.placeMonths }, null, 2);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([data], {type:'application/json'}));
     a.download = `stayscan-백업-${today()}.json`; a.click();
@@ -2683,6 +2693,7 @@ function renderSet(){
           for(const p of d.pensions) await savePension(p);
           /* v1.7.0 — 플레이스 리포트 기록도 함께 (예전 백업에는 없음) */
           if(Array.isArray(d.placeLogs)) for(const l of d.placeLogs) if(l && l.id && l.pid && l.week) await savePlaceLog(l);
+          if(Array.isArray(d.placeMonths)) for(const l of d.placeMonths) if(l && l.id && l.pid && l.month) await savePlaceMonth(l);
           await migratePriceUnit();   /* 예전 백업이면 객단가 단위도 함께 고칩니다 */
           toast(`${d.pensions.length}곳을 불러왔습니다`); renderSet(); renderList();
         });
@@ -5271,6 +5282,11 @@ async function loadPlaceLogs(){
     const snap = await db.collection('scanPlaceLogs').where('week', '>=', cut).get();
     state.placeLogs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   }catch(e){ console.error(e); }
+  /* v1.7.1 — 월간 기록 */
+  try{
+    const snap = await db.collection('scanPlaceMonths').where('month', '>=', cut.slice(0, 7)).get();
+    state.placeMonths = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  }catch(e){ console.error(e); }
 }
 function watchPlaceLogs(){
   if(!useFB) return;
@@ -5279,6 +5295,65 @@ function watchPlaceLogs(){
     state.placeLogs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     if(state.tab === 'place' && !prDirty) renderPlace();
   }, e => console.error(e));
+  db.collection('scanPlaceMonths').where('month', '>=', cut.slice(0, 7)).onSnapshot(snap => {
+    state.placeMonths = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    if(state.tab === 'place' && !prDirty) renderPlace();
+  }, e => console.error(e));
+}
+/* ── 월간 기록 (v1.7.1) ──
+   scanPlaceMonths 컬렉션, 문서 이름 = 업체id_YYYY-MM
+   { pid, month:'YYYY-MM', type, v:{항목:값}, at }  항목은 주간과 같습니다. */
+const prMLogId = (pid, month) => `${pid}_${month}`;
+async function savePlaceMonth(log){
+  const i = state.placeMonths.findIndex(x => x.id === log.id);
+  if(i >= 0) state.placeMonths[i] = log; else state.placeMonths.push(log);
+  if(useFB){
+    const { id, ...body } = log;
+    try{ await db.collection('scanPlaceMonths').doc(id).set(body); }
+    catch(e){ console.error(e); toast('월간 기록 저장에 실패했습니다'); return false; }
+  }
+  return true;
+}
+async function deletePlaceMonth(id){
+  if(useFB){
+    try{ await db.collection('scanPlaceMonths').doc(id).delete(); }
+    catch(e){ console.error(e); toast('지우지 못했습니다'); return false; }
+  }
+  state.placeMonths = state.placeMonths.filter(x => x.id !== id);
+  return true;
+}
+/* 달 계산 : 'YYYY-MM' 에 n달 더하기 */
+function prMShift(m, n){
+  const d = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+const prLastMonth = () => prMShift(today().slice(0, 7), -1);       /* 지난달 (다 끝난 달) */
+const prMTxt = m => `${Number(m.slice(5, 7))}월`;
+const prMTxtY = m => `${m.slice(2, 4)}년 ${Number(m.slice(5, 7))}월`;
+const prMLog = (pid, month) => state.placeMonths.find(l => l.pid === pid && l.month === month) || null;
+function prMVal(p, month, k){
+  if(k === 'reviewNew'){
+    const a = prMLog(p.id, month)?.v?.reviewTotal, b = prMLog(p.id, prMShift(month, -1))?.v?.reviewTotal;
+    return (typeof a === 'number' && typeof b === 'number') ? a - b : null;
+  }
+  const v = prMLog(p.id, month)?.v?.[k];
+  return typeof v === 'number' ? v : (typeof v === 'string' && v ? v : null);
+}
+/* 월간 계약 전 기준 = 계약 시작일이 든 달의 바로 앞 한 달 */
+const prMBaseMonth = p => p.contractStart ? prMShift(p.contractStart.slice(0, 7), -1) : '';
+function prMBase(p, k){
+  const m = prMBaseMonth(p);
+  if(!m) return null;
+  const v = prMVal(p, m, k);
+  return typeof v === 'number' ? { avg: v, n: 1 } : null;
+}
+/* 그 달의 주 = 월요일이 그 달에 있는 주 (다 끝난 주만) */
+function prWeeksOfMonth(m){
+  const out = [], lw = prLastWeek();
+  let w = prMonday(m + '-01');
+  if(w.slice(0, 7) !== m) w = rkShift(w, 7);
+  while(w.slice(0, 7) === m && w <= lw){ out.push(w); w = rkShift(w, 7); }
+  return out;
 }
 async function savePlaceLog(log){
   const i = state.placeLogs.findIndex(x => x.id === log.id);
@@ -5402,23 +5477,33 @@ function renderPlace(){
   if(!state.prPid || !ps.some(p => p.id === state.prPid)) state.prPid = (ps.find(p => p.managed) || ps[0]).id;
   const p = ps.find(x => x.id === state.prPid);
   const T = prType(p);
-  const v = state.prView || 'week';
+  if(state.prView === 'table') state.prView = 'month';           /* 1.7.0의 52주 표는 월간 입력으로 바뀌었습니다 */
+  const v = state.prView || 'month';
 
-  /* 지난주 입력 현황 — 관리 중인 곳만 */
-  const lw = prLastWeek();
+  /* 입력 현황 — 관리 중인 곳만.
+     월간 : 지난달을 안 적은 곳
+     주간 : 최근 8주 안에 주간 기록을 시작한 곳 중 지난주를 안 적은 곳 */
+  const lw = prLastWeek(), lm = prLastMonth();
   const mg = ps.filter(x => x.managed);
-  const miss = mg.filter(x => !prLog(x.id, lw));
+  const missM = mg.filter(x => !prMLog(x.id, lm));
+  const wkStarted = mg.filter(x => state.placeLogs.some(l => l.pid === x.id && l.week >= rkShift(lw, -56)));
+  const missW = wkStarted.filter(x => !prLog(x.id, lw));
+  const chips = (list, attr) => `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">
+    ${list.map(x => `<button class="btn ghost sm" ${attr}="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>`;
 
   el.innerHTML = `
     <div class="card noprint">
       <div class="row" style="flex-wrap:wrap;gap:6px">
-        <b style="font-size:14px">지난주 ${prWeekTxt(lw)} 입력</b>
-        <span class="pill ${miss.length ? 'amber' : ''}">${mg.length - miss.length} / ${mg.length}곳</span>
+        <b style="font-size:14px">지난달 ${prMTxtY(lm)} 월간 입력</b>
+        <span class="pill ${missM.length ? 'amber' : ''}">${mg.length - missM.length} / ${mg.length}곳</span>
       </div>
-      ${miss.length ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px">
-        ${miss.map(x => `<button class="btn ghost sm" data-prgo="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>
-        <p class="sub" style="margin:7px 0 0">아직 안 적은 곳입니다. 누르면 그 업체의 지난주 입력 화면이 열립니다.</p>`
-      : `<p class="sub" style="margin:6px 0 0">관리 중인 업체를 모두 적었습니다.</p>`}
+      ${missM.length ? chips(missM, 'data-prgom') : `<p class="sub" style="margin:6px 0 0">관리 중인 업체를 모두 적었습니다.</p>`}
+      <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:12px">
+        <b style="font-size:14px">지난주 ${prWeekTxt(lw)} 주간 입력</b>
+        <span class="pill ${missW.length ? 'amber' : 'gray'}">${wkStarted.length - missW.length} / ${wkStarted.length}곳</span>
+      </div>
+      ${missW.length ? chips(missW, 'data-prgo') : ''}
+      <p class="sub" style="margin:7px 0 0">${wkStarted.length ? '주간은 최근 8주 안에 주간 기록을 시작한 곳만 셉니다.' : '아직 주간 기록을 시작한 곳이 없습니다. 지난 1년치 월간을 다 적은 뒤 주간 기록을 시작하세요.'} 이름을 누르면 그 입력 화면이 열립니다.</p>
     </div>
 
     <div class="card">
@@ -5432,8 +5517,8 @@ function renderPlace(){
     </div>
 
     <div class="row noprint" style="gap:6px;margin-bottom:12px">
+      <button class="btn ${v==='month'?'':'sec'} sm grow" data-prv="month">월간 입력</button>
       <button class="btn ${v==='week'?'':'sec'} sm grow" data-prv="week">주간 입력</button>
-      <button class="btn ${v==='table'?'':'sec'} sm grow" data-prv="table">1년치 표</button>
       <button class="btn ${v==='trend'?'':'sec'} sm grow" data-prv="trend">추이</button>
     </div>
     <div id="prBody"></div>`;
@@ -5441,6 +5526,10 @@ function renderPlace(){
   el.querySelectorAll('[data-prgo]').forEach(b => b.onclick = () => {
     if(prDirty && !confirm('입력하던 내용이 저장되지 않았습니다. 다른 업체로 넘어갈까요?')) return;
     state.prPid = b.dataset.prgo; state.prView = 'week'; state.prWeek = lw; prDirty = false; renderPlace();
+  });
+  el.querySelectorAll('[data-prgom]').forEach(b => b.onclick = () => {
+    if(prDirty && !confirm('입력하던 내용이 저장되지 않았습니다. 다른 업체로 넘어갈까요?')) return;
+    state.prPid = b.dataset.prgom; state.prView = 'month'; state.prMonth = lm; prDirty = false; renderPlace();
   });
   $('#prPen').onchange = e => {
     if(prDirty && !confirm('입력하던 내용이 저장되지 않았습니다. 다른 업체로 넘어갈까요?')){ e.target.value = p.id; return; }
@@ -5451,7 +5540,7 @@ function renderPlace(){
     if(prDirty && !confirm('입력하던 내용이 저장되지 않았습니다. 화면을 바꿀까요?')) return;
     state.prView = b.dataset.prv; prDirty = false; renderPlace();
   });
-  v === 'table' ? prRenderTable(p) : v === 'trend' ? prRenderTrend(p) : prRenderWeek(p);
+  v === 'month' ? prRenderMonth(p) : v === 'trend' ? prRenderTrend(p) : prRenderWeek(p);
 }
 
 /* ── 리포트 설정 : 화면 종류 · 계약 시작일 ── */
@@ -5605,34 +5694,67 @@ function prCompareCard(p, w){
     <p class="sub" style="margin:4px 2px 0">${baseNote} · 전년 같은 주 = ${prWeekTxtY(yw)}${T === 'B' ? ' · 새 리뷰 = 리뷰 누적 건수의 지난주 대비 차이' : ''}</p>`;
 }
 
-/* ── 1년치 표 ── */
-function prRenderTable(p){
+/* ── 월간 입력 (v1.7.1, 1.7.0의 52주 표를 대신함) ──
+   최근 12개월(지난달까지)을 표 한 장에 적습니다. 네이버 통계에서 「월간」을 고른 숫자입니다. */
+const PR_MONTHS = 12;
+function prRenderMonth(p){
   const T = prType(p), F = PR_FIELDS[T];
-  const lw = prLastWeek();
-  const weeks = Array.from({ length: PR_TABLE_WEEKS }, (_, i) => rkShift(lw, -7 * i));
-  const have = weeks.filter(w => prLog(p.id, w)).length;
+  const lm = prLastMonth();
+  const months = Array.from({ length: PR_MONTHS }, (_, i) => prMShift(lm, -i));
+  const have = months.filter(m => prMLog(p.id, m)).length;
+  /* 비교표에 보일 달 : 고른 달 → 없으면 기록이 있는 가장 최근 달 → 지난달 */
+  let cm = state.prMonth && months.includes(state.prMonth) ? state.prMonth : (months.find(m => prMLog(p.id, m)) || lm);
+  state.prMonth = cm;
   $('#prBody').innerHTML = `
     <div class="card">
-      <p class="sub" style="margin:0">최근 ${PR_TABLE_WEEKS}주(위가 최근)입니다. 저장된 주는 숫자가 미리 들어 있습니다(${have}주). 빈칸을 채우고 <b>맨 아래 저장</b>을 한 번 누르세요.
-      엑셀에서 여러 칸을 복사해 한 칸에 붙여넣으면 <b>그 칸부터 오른쪽 · 아래로</b> 이어서 들어갑니다.
-      ${T === 'B' ? '<br><b>리뷰 누적</b>은 과거 숫자를 알 수 없으면 비워 두세요.' : ''}</p>
+      <p class="sub" style="margin:0">네이버 스마트플레이스 통계에서 <b>「월간」</b>을 고르고 나온 숫자를 적습니다. 최근 ${PR_MONTHS}개월(위가 최근)이며, 저장된 달은 숫자가 미리 들어 있습니다(${have}개월).
+      빈칸을 채우고 <b>맨 아래 저장</b>을 한 번 누르세요. 엑셀에서 여러 칸을 복사해 한 칸에 붙여넣으면 <b>그 칸부터 오른쪽 · 아래로</b> 이어서 들어갑니다.
+      ${T === 'B' ? '<br><b>리뷰 누적</b>은 그 달 말일 기준 「전체 ○건」입니다. 지난 달 숫자를 알 수 없으면 비워 두세요. 그 달 새 리뷰는 앞 달과의 차이로 계산합니다.' : ''}</p>
     </div>
+
+    <div class="card">
+      <div style="font-size:12.5px;font-weight:700;color:var(--green2);margin-bottom:6px">정리된 글 붙여넣기 (선택)</div>
+      <div class="row" style="gap:6px;margin-bottom:7px">
+        <select id="prMPasteM" style="width:auto">${months.map(m => `<option value="${m}" ${m === cm ? 'selected' : ''}>${prMTxtY(m)}</option>`).join('')}</select>
+        <span class="sub">에 채우기</span>
+      </div>
+      <textarea id="prPaste" rows="3" placeholder="${T === 'A' ? '예) 플레이스 유입: 6,812\n네이버지도: 3,920' : '예) 예약 유입: 8,410\n신청: 61'}"></textarea>
+      <button class="btn ghost full" style="margin-top:8px" id="prFill">붙여넣은 글로 그 달 칸 채우기</button>
+    </div>
+
     <div class="card flat" style="overflow:auto;max-height:70vh">
-      <table class="bm" id="prTbl" style="min-width:${150 + F.length * 82}px">
-        <tr style="position:sticky;top:0;z-index:1"><th style="position:sticky;left:0;z-index:2">주 (월~일)</th>${F.map(f => `<th style="text-align:center">${esc(f.s)}</th>`).join('')}</tr>
-        ${weeks.map((w, r) => {
-          const v = prLog(p.id, w)?.v || {};
-          return `<tr><td style="white-space:nowrap;position:sticky;left:0;background:#fff;font-size:12.5px">${prWeekTxtY(w)}</td>
+      <table class="bm" id="prTbl" style="min-width:${110 + F.length * 82}px">
+        <tr style="position:sticky;top:0;z-index:1"><th style="position:sticky;left:0;z-index:2">달</th>${F.map(f => `<th style="text-align:center">${esc(f.s)}</th>`).join('')}</tr>
+        ${months.map((m, r) => {
+          const v = prMLog(p.id, m)?.v || {};
+          return `<tr><td style="white-space:nowrap;position:sticky;left:0;background:#fff;font-size:12.5px">${prMTxtY(m)}</td>
             ${F.map((f, c) => `<td style="padding:3px"><input data-r="${r}" data-c="${c}" value="${esc(v[f.k] ?? '')}"
               ${f.u === 'txt' ? '' : 'inputmode="decimal"'}
               style="padding:6px 5px;font-size:13.5px;text-align:${f.u === 'txt' ? 'left' : 'right'};min-width:${f.u === 'txt' ? 120 : 64}px"></td>`).join('')}</tr>`;
         }).join('')}
       </table>
     </div>
-    <button class="btn full" style="margin-top:12px" id="prTblSave">바뀐 주 저장</button>`;
+    <button class="btn full" style="margin-top:12px" id="prTblSave">바뀐 달 저장</button>
 
+    ${prMCompareCard(p, cm, months)}`;
+
+  const weeks = months;                                   /* 아래 저장 코드가 쓰는 이름 */
   const cell = (r, c) => $(`#prTbl input[data-r="${r}"][data-c="${c}"]`);
   const mark = i => { i.style.background = '#FFF6DA'; prDirty = true; };
+  $('#prPaste').oninput = () => prDirty = true;
+  $('#prFill').onclick = () => {
+    const m = $('#prMPasteM').value, r = months.indexOf(m);
+    const got = prParse($('#prPaste').value, T);
+    const ks = Object.keys(got);
+    if(!ks.length){ toast('알아볼 수 있는 항목이 없습니다 · 「플레이스 유입: 1,741」처럼 이름과 숫자를 적어 주세요'); return; }
+    ks.forEach(k => { const c = F.findIndex(f => f.k === k); const x = c >= 0 ? cell(r, c) : null; if(x){ x.value = got[k]; mark(x); } });
+    toast(`${prMTxtY(m)} ${ks.length}칸을 채웠습니다 · 확인 후 저장하세요`);
+  };
+  const cmSel = $('#prCmpM');
+  if(cmSel) cmSel.onchange = e => {
+    if(prDirty && !confirm('표에 입력하던 내용이 저장되지 않았습니다. 비교할 달을 바꿀까요?')){ e.target.value = cm; return; }
+    state.prMonth = e.target.value; prDirty = false; renderPlace();
+  };
   $$('#prTbl input').forEach(i => {
     i.oninput = () => mark(i);
     i.onpaste = e => {
@@ -5660,10 +5782,10 @@ function prRenderTable(p){
         if(!s) return;
         if(f.u === 'txt'){ v[f.k] = s; return; }
         const n = prNum(s);
-        if(n == null){ if(!bad) bad = `${prWeekTxtY(w)} 「${f.s}」`; return; }
+        if(n == null){ if(!bad) bad = `${prMTxtY(w)} 「${f.s}」`; return; }
         v[f.k] = n;
       });
-      const old = prLog(p.id, w);
+      const old = prMLog(p.id, w);
       const oldV = old ? old.v || {} : {};
       /* 표에 없는 칸(다른 종류로 적은 값)은 그대로 둡니다 */
       const keep = {};
@@ -5671,55 +5793,108 @@ function prRenderTable(p){
       const nv = { ...keep, ...v };
       const same = JSON.stringify(Object.entries(nv).sort()) === JSON.stringify(Object.entries(oldV).sort());
       if(same) return;
-      if(!Object.keys(nv).length){ if(old){ jobs.push(() => deletePlaceLog(old.id)); removed++; } return; }
-      jobs.push(() => savePlaceLog({ id: prLogId(p.id, w), pid: p.id, week: w, type: T, v: nv, at: new Date().toISOString() }));
+      if(!Object.keys(nv).length){ if(old){ jobs.push(() => deletePlaceMonth(old.id)); removed++; } return; }
+      jobs.push(() => savePlaceMonth({ id: prMLogId(p.id, w), pid: p.id, month: w, type: T, v: nv, at: new Date().toISOString() }));
       saved++;
     });
     if(bad){ toast(`${bad} 칸은 숫자로 적어 주세요`); return; }
-    if(!jobs.length){ toast('바뀐 주가 없습니다'); return; }
+    if(!jobs.length){ toast('바뀐 달이 없습니다'); return; }
     const btn = $('#prTblSave'); btn.disabled = true; btn.textContent = '저장하는 중…';
     for(const j of jobs) await j();
     prDirty = false;
-    toast(`${saved}주 저장${removed ? ` · ${removed}주 지움` : ''}`);
+    toast(`${saved}개월 저장${removed ? ` · ${removed}개월 지움` : ''}`);
     renderPlace();
   };
 }
 
-/* ── 추이 ── */
+/* 한 달의 비교 표 — 전월 · 계약 전(계약 시작일 앞 달) · 전년 같은 달 */
+function prMCompareCard(p, m, months){
+  const T = prType(p);
+  const sel = `<select id="prCmpM" style="width:auto;padding:5px 8px;font-size:14px">${months.map(x => `<option value="${x}" ${x === m ? 'selected' : ''}>${prMTxtY(x)}</option>`).join('')}</select>`;
+  if(!prMLog(p.id, m)) return `<h2 class="sec">월간 비교</h2><div class="row" style="gap:8px">${sel}<span class="sub">이 달은 아직 기록이 없습니다.</span></div>`;
+  const pm = prMShift(m, -1), ym = prMShift(m, -12), bm = prMBaseMonth(p);
+  const rows = PR_METRICS[T].map(k => {
+    const f = prField(T, k);
+    const c = prMVal(p, m, k);
+    const d1 = prDelta(c, prMVal(p, pm, k), f);
+    const b = prMBase(p, k);
+    const d2 = prDelta(c, b ? b.avg : null, f);
+    const d3 = prDelta(c, prMVal(p, ym, k), f);
+    return `<tr><td>${esc(prName(p, f))}</td><td>${prFmt(c, f.u)}</td>
+      <td class="${d1.c}">${d1.h}</td><td class="${d2.c}">${d2.h}</td><td class="${d3.c}">${d3.h}</td></tr>`;
+  }).join('');
+  const kw = x => esc(prMVal(p, x, 'kw') || '–');
+  const baseNote = !p.contractStart ? '계약 시작일을 넣으면 「계약 전」 비교가 나옵니다 (리포트 설정).'
+    : prMLog(p.id, bm) ? `계약 전 = 계약 시작일(${esc(p.contractStart)})이 든 달의 앞 달, ${prMTxtY(bm)}`
+    : `계약 전 달(${prMTxtY(bm)}) 기록이 없어 「계약 전」 비교는 비어 있습니다.`;
+  return `<h2 class="sec">월간 비교</h2>
+    <div class="row" style="gap:8px;margin-bottom:8px">${sel}</div>
+    <div class="card flat" style="overflow-x:auto"><table class="bm">
+      <tr><th>항목</th><th>이 달</th><th>전월 대비</th><th>계약 전 대비</th><th>전년 같은 달</th></tr>
+      ${rows}
+    </table></div>
+    <p class="sub" style="margin:7px 2px 0">1위 유입 키워드 : 이 달 <b>${kw(m)}</b> · 전월 ${kw(pm)} · 전년 ${kw(ym)}</p>
+    <p class="sub" style="margin:4px 2px 0">${baseNote} · 전년 같은 달 = ${prMTxtY(ym)}${T === 'B' ? ' · 새 리뷰 = 리뷰 누적 건수의 앞 달 대비 차이' : ''}</p>`;
+}
+
+/* ── 추이 (v1.7.1 — 월간 / 주간 고르기) ── */
 function prRenderTrend(p){
   const T = prType(p);
   const mets = PR_METRICS[T];
   if(!mets.includes(state.prMetric)) state.prMetric = 'inflow';
-  const k = state.prMetric, f = prField(T, k);
-  const n = Number(state.prPer) || 26;
-  const lw = prLastWeek();
-  const weeks = Array.from({ length: n }, (_, i) => rkShift(lw, -7 * (n - 1 - i)));
-  const any = weeks.some(w => prLog(p.id, w));
-  const b = prBase(p, k);
+  const k = state.prMetric;
+  const U = state.prUnit === 'week' ? 'week' : 'month';
+  let body;
+  if(U === 'month'){
+    const n = Number(state.prMPer) || 12;
+    const lm = prLastMonth();
+    const months = Array.from({ length: n }, (_, i) => prMShift(lm, -(n - 1 - i)));
+    const any = months.some(m => prMLog(p.id, m));
+    body = any ? `
+      <div class="card">${prMChart(p, k, months)}</div>
+      <h2 class="sec">월별 기록</h2>
+      ${prMonthTable(p, months.slice().reverse())}`
+      : `<div class="empty"><div class="big">이 기간에 월간 기록이 없습니다</div>
+        <p class="sub">월간 입력에서 먼저 적어 주세요.</p></div>`;
+  }else{
+    const n = Number(state.prPer) || 26;
+    const lw = prLastWeek();
+    const weeks = Array.from({ length: n }, (_, i) => rkShift(lw, -7 * (n - 1 - i)));
+    const any = weeks.some(w => prLog(p.id, w));
+    body = any ? `
+      <div class="card">${prChart(p, k, weeks)}</div>
+      <h2 class="sec">주별 기록</h2>
+      ${prWeekTable(p, weeks.slice().reverse())}`
+      : `<div class="empty"><div class="big">이 기간에 주간 기록이 없습니다</div>
+        <p class="sub">주간 입력에서 먼저 적어 주세요.</p></div>`;
+  }
+  const perOpts = U === 'month'
+    ? [['12','최근 12개월'],['24','최근 24개월']].map(([v2, t]) => `<option value="${v2}" ${String(state.prMPer || '12')===v2?'selected':''}>${t}</option>`).join('')
+    : [['12','최근 12주'],['26','최근 26주'],['52','최근 52주']].map(([v2, t]) => `<option value="${v2}" ${String(state.prPer || '26')===v2?'selected':''}>${t}</option>`).join('');
 
   $('#prBody').innerHTML = `
+    <div class="row" style="gap:6px;margin-bottom:10px">
+      <button class="btn ${U==='month'?'':'sec'} sm grow" data-pru="month">월간</button>
+      <button class="btn ${U==='week'?'':'sec'} sm grow" data-pru="week">주간</button>
+    </div>
     <div class="card">
       <div class="g2">
         <label class="f" style="margin:0"><span class="lb">항목</span>
           <select id="prMet">${mets.map(x => { const ff = prField(T, x); return `<option value="${x}" ${x===k?'selected':''}>${esc(prName(p, ff))}</option>`; }).join('')}</select></label>
         <label class="f" style="margin:0"><span class="lb">기간</span>
-          <select id="prPer">${[['12','최근 12주'],['26','최근 26주'],['52','최근 52주']].map(([v2, t]) => `<option value="${v2}" ${String(n)===v2?'selected':''}>${t}</option>`).join('')}</select></label>
+          <select id="prPer">${perOpts}</select></label>
       </div>
     </div>
-    ${any ? `
-      <div class="card">${prChart(p, k, weeks)}</div>
-      <h2 class="sec">주별 기록</h2>
-      ${prWeekTable(p, weeks.slice().reverse())}
-    ` : `<div class="empty"><div class="big">이 기간에 기록이 없습니다</div>
-      <p class="sub">주간 입력이나 1년치 표에서 먼저 적어 주세요.</p></div>`}
+    ${body}
     <button class="btn full" style="margin-top:14px" id="prGoReport">광고주 보고서 만들기</button>
-    <p class="sub" style="margin:7px 2px 0">순위 추이 탭의 광고주 보고서에 키워드 순위와 함께 이 업체의 플레이스 리포트가 들어갑니다.</p>`;
+    <p class="sub" style="margin:7px 2px 0">순위 추이 탭의 광고주 보고서에 키워드 순위와 함께 이 업체의 월별 추이와 그 달의 주간 기록이 들어갑니다. 기간을 「지난 달」로 고르면 지난달 보고서가 됩니다.</p>`;
 
+  $$('#prBody [data-pru]').forEach(b => b.onclick = () => { state.prUnit = b.dataset.pru; renderPlace(); });
   $('#prMet').onchange = e => { state.prMetric = e.target.value; renderPlace(); };
-  $('#prPer').onchange = e => { state.prPer = e.target.value; renderPlace(); };
+  $('#prPer').onchange = e => { U === 'month' ? state.prMPer = e.target.value : state.prPer = e.target.value; renderPlace(); };
   $('#prGoReport').onclick = () => {
     state.rankPen = p.id; state.rankView = 'report';
-    if(!['30','90','this','last'].includes(state.rankPeriod)) state.rankPeriod = '30';
+    state.rankPeriod = 'last';
     switchTab('rank');
   };
 }
@@ -5735,32 +5910,41 @@ function prWeekTable(p, weeks){
       <td style="text-align:left;font-size:12.5px">${esc(prVal(p, w, 'kw') || '–')}</td></tr>`).join('')}
   </table></div>`;
 }
+/* 월별 표 (추이 · 광고주 보고서 공용) */
+function prMonthTable(p, months){
+  const T = prType(p);
+  const ms = PR_METRICS[T].filter(k => !(T === 'B' && /^ch/.test(k)));
+  return `<div class="card flat" style="overflow-x:auto"><table class="bm">
+    <tr><th>달</th>${ms.map(k => `<th>${esc(prField(T, k).s)}</th>`).join('')}<th style="text-align:left">1위 키워드</th></tr>
+    ${months.map(m => `<tr><td style="white-space:nowrap">${prMTxtY(m)}</td>
+      ${ms.map(k => `<td>${prFmt(prMVal(p, m, k), prField(T, k).u)}</td>`).join('')}
+      <td style="text-align:left;font-size:12.5px">${esc(prMVal(p, m, 'kw') || '–')}</td></tr>`).join('')}
+  </table></div>`;
+}
 
-/* 꺾은선 : 이번 기간(초록) · 1년 전 같은 주들(회색 점선) · 계약 전 평균(주황 점선) */
-function prChart(p, k, weeks){
+/* 꺾은선 (주간 · 월간 공용)
+   cur 이번 기간(초록) · prev 1년 전(회색 점선) · base 계약 전 기준(주황 점선) */
+function prLineChart(p, k, labels, cur, prev, base, prevLab, baseLab){
   const T = prType(p), f = prField(T, k);
-  const cur = weeks.map(w => prVal(p, w, k));
-  const prev = weeks.map(w => prVal(p, rkShift(w, -364), k));
-  const b = prBase(p, k);
-  const all = cur.concat(prev).filter(v => typeof v === 'number').concat(b ? [b.avg] : []);
+  const all = cur.concat(prev).filter(v => typeof v === 'number').concat(base ? [base.avg] : []);
   if(!all.length) return '<p class="sub" style="margin:0">이 항목은 기록된 숫자가 없습니다.</p>';
   const W = 640, H = 250, L = 46, R = 12, T0 = 14, B0 = 30;
   const mx = Math.max(...all, 1), mn = Math.min(0, ...all);
   const nice = v => { const e = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / e * 2) / 2 * e; };
   const yMax = nice(mx), yMin = mn;
-  const xOf = i => weeks.length === 1 ? L + (W - L - R) / 2 : L + (W - L - R) * i / (weeks.length - 1);
+  const xOf = i => labels.length === 1 ? L + (W - L - R) / 2 : L + (W - L - R) * i / (labels.length - 1);
   const yOf = v => T0 + (H - T0 - B0) * (1 - (v - yMin) / ((yMax - yMin) || 1));
   let g = '';
   [yMin, (yMin + yMax) / 2, yMax].forEach(t => {
     g += `<line x1="${L}" y1="${yOf(t)}" x2="${W-R}" y2="${yOf(t)}" stroke="#EDF1EE"/>
       <text x="${L-6}" y="${yOf(t)+4}" text-anchor="end" font-size="11" fill="#6B7B72">${fmt(t)}${f.u === '%' ? '%' : ''}</text>`;
   });
-  const step = Math.max(1, Math.ceil(weeks.length / 7));
-  weeks.forEach((w, i) => {
-    if(i % step && i !== weeks.length - 1) return;
-    g += `<text x="${xOf(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="#6B7B72">${prMD(w)}</text>`;
+  const step = Math.max(1, Math.ceil(labels.length / 7));
+  labels.forEach((t, i) => {
+    if(i % step && i !== labels.length - 1) return;
+    g += `<text x="${xOf(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="#6B7B72">${t}</text>`;
   });
-  if(b) g += `<line x1="${L}" y1="${yOf(b.avg)}" x2="${W-R}" y2="${yOf(b.avg)}" stroke="#B4740A" stroke-width="1.6" stroke-dasharray="6 4"/>`;
+  if(base) g += `<line x1="${L}" y1="${yOf(base.avg)}" x2="${W-R}" y2="${yOf(base.avg)}" stroke="#B4740A" stroke-width="1.6" stroke-dasharray="6 4"/>`;
   const line = (vals, color, dash, wd) => {
     let run = [];
     const flush = () => { if(run.length > 1) g += `<polyline fill="none" stroke="${color}" stroke-width="${wd}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linejoin="round" points="${run.join(' ')}"/>`; run = []; };
@@ -5775,65 +5959,88 @@ function prChart(p, k, weeks){
   return `<div style="font-size:13px;font-weight:800;color:var(--green);margin-bottom:6px">${esc(prName(p, f))}${f.u === 'txt' ? '' : ` (${f.u})`}</div>
     <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg>
     <div class="row" style="flex-wrap:wrap;gap:12px;margin-top:8px">
-      ${lg('#1B4332', '이번 기간')}${prev.some(v => typeof v === 'number') ? lg('#9AA7A0', '1년 전 같은 주', '4 3') : ''}${b ? lg('#B4740A', `계약 전 평균 ${f.u === '%' ? fmt(b.avg) + '%' : fmt(Math.round(b.avg))}`, '6 4') : ''}
+      ${lg('#1B4332', '이번 기간')}${prev.some(v => typeof v === 'number') ? lg('#9AA7A0', prevLab, '4 3') : ''}${base ? lg('#B4740A', `${baseLab} ${f.u === '%' ? fmt(base.avg) + '%' : fmt(Math.round(base.avg))}`, '6 4') : ''}
     </div>`;
 }
-
-/* ── 광고주 보고서에 들어가는 부분 ──
-   기간 안에 「월~일」이 다 들어간 주만 셉니다. 기록이 없으면 빈 문자열. */
-function prReportWeeks(from, until){
-  let w = prMonday(from);
-  if(w < from) w = rkShift(w, 7);
-  const out = [];
-  while(rkShift(w, 6) <= until){ out.push(w); w = rkShift(w, 7); }
-  return out;
+function prChart(p, k, weeks){
+  return prLineChart(p, k, weeks.map(prMD), weeks.map(w => prVal(p, w, k)),
+    weeks.map(w => prVal(p, rkShift(w, -364), k)), prBase(p, k), '1년 전 같은 주', '계약 전 4주 평균');
 }
-function prHasData(p){ return state.placeLogs.some(l => l.pid === p.id); }
+function prMChart(p, k, months){
+  return prLineChart(p, k, months.map(m => m.slice(2, 4) + '.' + Number(m.slice(5, 7))), months.map(m => prMVal(p, m, k)),
+    months.map(m => prMVal(p, prMShift(m, -12), k)), prMBase(p, k), '작년 같은 달', '계약 전 달');
+}
+
+/* ── 광고주 보고서에 들어가는 부분 (v1.7.1) ──
+   보고서 달 = 기간 끝 날짜가 든 달. 그 달이 아직 안 끝났으면 지난달.
+   ① 보고서 달까지 최근 12개월의 월별 추이  ② 그 달의 주간 기록(월요일이 그 달에 있는 주)
+   기록이 하나도 없으면 빈 문자열. */
+function prHasData(p){ return state.placeLogs.some(l => l.pid === p.id) || state.placeMonths.some(l => l.pid === p.id); }
+function prReportMonth(until){
+  const um = until.slice(0, 7);
+  return um >= today().slice(0, 7) ? prLastMonth() : um;
+}
 function prReportSection(p, from, until, no){
-  const weeks = prReportWeeks(from, until).filter(w => w <= prLastWeek());
-  if(!weeks.length || !weeks.some(w => prLog(p.id, w))) return '';
   const T = prType(p);
-  const got = weeks.filter(w => prLog(p.id, w));
-  const last = got[got.length - 1];
-  const rows = PR_METRICS[T].map(k => {
-    const f = prField(T, k);
-    const avg = prAvg(weeks.map(w => prVal(p, w, k)));
-    if(avg == null) return null;
-    const b = prBase(p, k);
-    const yAvg = prAvg(weeks.map(w => prVal(p, rkShift(w, -364), k)));
-    const lv = prVal(p, last, k), pv = prVal(p, rkShift(last, -7), k);
-    return { f, k, avg, b, yAvg, lv, pv };
-  }).filter(Boolean);
-  if(!rows.length) return '';
-  /* 총평 한 줄 — 대표 항목(유입) 기준 */
-  const main = rows.find(r => r.k === 'inflow') || rows[0];
-  const pctTxt = (a, ref) => {
-    if(typeof ref !== 'number' || !ref) return '';
-    const d = Math.round((a - ref) / ref * 100);
-    return d === 0 ? '비슷합니다' : d > 0 ? `<b>${d}% 많습니다</b>` : `${-d}% 적습니다`;
-  };
-  const bits = [`${prWeekTxt(got[0])} ~ ${prWeekTxt(last)} 중 <b>${got.length}주</b>의 네이버 통계를 기록했습니다.`];
-  bits.push(`주 평균 ${esc(prName(p, main.f))} <b>${main.f.u === '%' ? fmt(main.avg) + '%' : fmt(Math.round(main.avg)) + main.f.u}</b>입니다.`);
-  const s1 = main.b ? pctTxt(main.avg, main.b.avg) : '', s2 = pctTxt(main.avg, main.yAvg);
-  if(s1) bits.push(`계약 전 4주 평균보다 ${s1}.`);
-  if(s2) bits.push(`작년 같은 기간보다 ${s2}.`);
-  return `
-    <h3>${no}. 네이버 플레이스 리포트</h3>
+  const M = prReportMonth(until);
+  const months = Array.from({ length: 12 }, (_, i) => prMShift(M, -(11 - i)));
+  const recM = months.filter(m => prMLog(p.id, m));
+  const weeks = prWeeksOfMonth(M);
+  const recW = weeks.filter(w => prLog(p.id, w));
+  if(!recM.length && !recW.length) return '';
+
+  let monthPart = '';
+  if(recM.length){
+    /* 보고서 달에 기록이 없으면 그 앞의 가장 최근 기록 달로 비교합니다 */
+    const F0 = recM[recM.length - 1];
+    const pm = prMShift(F0, -1), ym = prMShift(F0, -12);
+    const rows = PR_METRICS[T].map(k => {
+      const f = prField(T, k), c = prMVal(p, F0, k);
+      if(typeof c !== 'number') return null;
+      const b = prMBase(p, k);
+      return { f, k, c, d1: prDelta(c, prMVal(p, pm, k), f), d2: prDelta(c, b ? b.avg : null, f), d3: prDelta(c, prMVal(p, ym, k), f), b, y: prMVal(p, ym, k) };
+    }).filter(Boolean);
+    const main = rows.find(r => r.k === 'inflow') || rows[0];
+    /* 「전월보다 23% 많습니다」 / 「전월과 비슷합니다」 (기준 이름이 모두 받침으로 끝나 「과」) */
+    const pctTxt = (a, ref, lab) => {
+      if(typeof ref !== 'number' || !ref) return '';
+      const d = Math.round((a - ref) / ref * 100);
+      return d === 0 ? `${lab}과 비슷합니다.` : d > 0 ? `${lab}보다 <b>${d}% 많습니다.</b>` : `${lab}보다 ${-d}% 적습니다.`;
+    };
+    const bits = [];
+    if(main){
+      bits.push(`${prMTxtY(F0)} ${esc(prName(p, main.f))} <b>${main.f.u === '%' ? fmt(main.c) + '%' : fmt(main.c) + main.f.u}</b>입니다.`);
+      [pctTxt(main.c, prMVal(p, pm, main.k), '전월'),
+       main.b ? pctTxt(main.c, main.b.avg, `계약 전(${prMTxtY(prMBaseMonth(p))})`) : '',
+       pctTxt(main.c, main.y, '작년 같은 달')].forEach(s => { if(s) bits.push(s); });
+    }
+    if(F0 !== M) bits.unshift(`${prMTxtY(M)} 월간 기록이 아직 없어 ${prMTxtY(F0)} 기준으로 비교했습니다.`);
+    const first = recM[0];
+    const shown = months.filter(m => m >= first);
+    monthPart = `
     <p style="margin:0 0 12px;line-height:1.6">${bits.join(' ')}</p>
-    <table class="bm">
-      <tr><th>항목</th><th>주 평균</th><th>계약 전 대비</th><th>작년 같은 기간 대비</th><th>마지막 주 (전주 대비)</th></tr>
-      ${rows.map(r => {
-        const d2 = prDelta(r.avg, r.b ? r.b.avg : null, r.f), d3 = prDelta(r.avg, r.yAvg, r.f), d1 = prDelta(r.lv, r.pv, r.f);
-        return `<tr><td>${esc(prName(p, r.f))}</td><td>${prFmt(r.f.u === '%' ? r.avg : Math.round(r.avg), r.f.u)}</td>
-          <td class="${d2.c}">${d2.h}</td><td class="${d3.c}">${d3.h}</td>
-          <td><span style="font-weight:700">${prFmt(r.lv, r.f.u)}</span> <span class="${d1.c}" style="font-size:12px">${d1.h}</span></td></tr>`;
-      }).join('')}
-    </table>
-    <div class="rkchart" style="margin-top:14px">${prChart(p, main.k, weeks)}</div>
-    <div style="margin-top:12px">${prWeekTable(p, weeks.slice().reverse())}</div>
-    <p class="sub" style="margin:7px 0 0">네이버 스마트플레이스 통계를 매주(월~일) 옮겨 적은 값입니다.
-      ${p.contractStart ? `계약 전 = 계약 시작일(${esc(p.contractStart)}) 앞 4주 평균.` : ''} 작년 같은 기간 = 52주 전 같은 주들.
-      ${T === 'B' ? '새 리뷰 = 리뷰 누적 건수의 주간 차이.' : ''}</p>`;
+    ${rows.length ? `<table class="bm">
+      <tr><th>항목</th><th>${prMTxt(F0)}</th><th>전월 대비</th><th>계약 전 대비</th><th>작년 같은 달 대비</th></tr>
+      ${rows.map(r => `<tr><td>${esc(prName(p, r.f))}</td><td>${prFmt(r.c, r.f.u)}</td>
+        <td class="${r.d1.c}">${r.d1.h}</td><td class="${r.d2.c}">${r.d2.h}</td><td class="${r.d3.c}">${r.d3.h}</td></tr>`).join('')}
+    </table>` : ''}
+    <div style="font-size:13.5px;font-weight:800;color:var(--green);margin:16px 0 6px">월별 추이 (최근 12개월)</div>
+    <div class="rkchart">${prMChart(p, main ? main.k : 'inflow', months)}</div>
+    <div style="margin-top:12px">${prMonthTable(p, shown.slice().reverse())}</div>`;
+  }
+
+  const weekPart = recW.length ? `
+    <div style="font-size:13.5px;font-weight:800;color:var(--green);margin:18px 0 6px">${prMTxtY(M)} 주간 기록</div>
+    ${prWeekTable(p, weeks.slice().reverse())}
+    <p class="sub" style="margin:6px 0 0">월요일이 ${prMTxt(M)}에 있는 주입니다. 주가 달의 경계에 걸쳐 있어 주간 합계는 월간 숫자와 다를 수 있습니다.</p>` : '';
+
+  return `
+    <h3>${no}. 네이버 플레이스 리포트 · ${prMTxtY(M)}</h3>
+    ${monthPart}
+    ${weekPart}
+    <p class="sub" style="margin:10px 0 0">네이버 스마트플레이스 통계(월간 · 주간)를 옮겨 적은 값입니다.
+      ${p.contractStart ? `계약 전 = 계약 시작일(${esc(p.contractStart)})이 든 달의 앞 달.` : ''} 작년 같은 달 = 12개월 전.
+      ${T === 'B' ? '새 리뷰 = 리뷰 누적 건수의 앞 달(앞 주) 대비 차이.' : ''}</p>`;
 }
 
 /* ═══════════ 탭 ═══════════ */
